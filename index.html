@@ -408,7 +408,7 @@
   </section>
 </dialog>
 
-<!-- First open only. -->
+<!-- The four short tips. Shown once by itself on first open; the ? button and "How this works" bring it back any time. -->
 <dialog class="sheet welcome" id="welcomeSheet" aria-labelledby="welcomeTitle">
   <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
   <h2 class="sheet-title" id="welcomeTitle" tabindex="-1" autofocus>Welcome to Jubilee</h2>
@@ -425,9 +425,10 @@
   </div>
 </dialog>
 
-<!-- The whole manual. Opened with the ? button. -->
+<!-- The whole manual. Opened with "Show me more" on the short tips. -->
 <dialog class="sheet help" id="helpSheet" aria-labelledby="helpTitle">
   <h2 class="sheet-title" id="helpTitle" tabindex="-1" autofocus>How this works</h2>
+  <button type="button" class="link-btn" id="helpBasics">Just the basics, please</button>
 
   <section class="help-card">
     <h3><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>Logging</h3>

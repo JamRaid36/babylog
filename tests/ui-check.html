@@ -119,8 +119,13 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     d.querySelector('#helpInstall').click();
     check('help can jump to the Home Screen steps', !d.querySelector('#helpSheet').open && d.querySelector('#install').open);
     d.querySelector('#helpBtn').click();
-    check('the ? button opens help any time', d.querySelector('#helpSheet').open);
-    d.querySelector('#helpClose').click();
+    check('the ? button brings the short tips back any time', d.querySelector('#welcomeSheet').open && !d.querySelector('#helpSheet').open);
+    d.querySelector('#welcomeMore').click();
+    check('the full help is one tap from the short tips', d.querySelector('#helpSheet').open && !d.querySelector('#welcomeSheet').open);
+    d.querySelector('#helpBasics').click();
+    check('the full help has a way back to the short tips', d.querySelector('#welcomeSheet').open && !d.querySelector('#helpSheet').open);
+    d.querySelector('#welcomeOk').click();
+    check('"Got it" closes the short tips', !d.querySelector('#welcomeSheet').open);
     d.querySelector('.act[data-log="poop"]').click();
     d.querySelector('.act[data-log="feed"]').click();
     await load('../index.html?reopen');

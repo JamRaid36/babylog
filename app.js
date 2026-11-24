@@ -560,8 +560,15 @@ function openHelp() {
   helpSheet.showModal();
   helpSheet.scrollTop = 0;
 }
-$('#helpBtn').addEventListener('click', openHelp);
-$('#setHelp').addEventListener('click', openHelp);
+// The ? button and "How this works" open the four short tips; the whole manual is one tap further ("Show me more").
+function openTips() {
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  welcomeSheet.showModal();
+  welcomeSheet.scrollTop = 0;
+}
+$('#helpBtn').addEventListener('click', openTips);
+$('#setHelp').addEventListener('click', openTips);
+$('#helpBasics').addEventListener('click', openTips);
 $('#helpClose').addEventListener('click', () => helpSheet.close());
 $('#helpInstall').addEventListener('click', showInstallSteps);
 
