@@ -107,6 +107,7 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     // ── real mode: does a tap survive closing the app? ──
     await load('../index.html');
     d = frame.contentDocument;
+    check('the note from Dad is the first thing on the front page, word for word', d.querySelector('main').firstElementChild.id === 'cheer' && d.querySelector('#cheer').textContent.replace(/\s+/g, ' ').trim() === 'This girl is strong and you are amazing parents. You can do this!' && d.querySelector('#cheer').getBoundingClientRect().height > 80, d.querySelector('#cheer')?.textContent);
     check('first open is empty with a hint', d.querySelector('.empty-title')?.textContent === 'Nothing logged yet');
     check('first open asks whose phone this is', d.querySelector('#guide').open && !d.querySelector('.guide-step[data-step="who"]').hidden);
     check('only one guide screen shows at a time', d.querySelectorAll('.guide-step:not([hidden])').length === 1);
