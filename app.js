@@ -675,7 +675,7 @@ guide.addEventListener('click', (ev) => {
 });
 
 function connectWith(text) {
-  const setup = C.findSetup(text);
+  const setup = C.findSetup(text, DEFAULT_REPO);
   if (!setup) return false;
   applySetup(setup);
   toast('Connected. You both see the same log now.');
@@ -687,7 +687,10 @@ $('#guideConnect').addEventListener('click', async () => {
   try {
     if (navigator.clipboard && navigator.clipboard.readText) text = await navigator.clipboard.readText();
   } catch { text = ''; }
-  if (!connectWith(text)) $('#guideConnectHelp').hidden = false;
+  if (text) $('#guidePaste').value = text;
+  const ok = connectWith(text);
+  $('#guideConnectHelp').hidden = ok || !!text;
+  $('#guidePasteError').hidden = ok || !text;
 });
 $('#guidePasteGo').addEventListener('click', () => {
   const ok = connectWith($('#guidePaste').value);

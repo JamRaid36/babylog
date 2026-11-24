@@ -334,6 +334,9 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s4) var(--s4) 0; }
 .guide-pic-word span { font-size: 16px; font-weight: 800; }
 .guide-who { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); margin-top: var(--s5); }
 .guide-who .btn.btn-big { min-height: 96px; font-size: 24px; border-radius: var(--r3); margin-top: 0; }
+.guide-list-plain li { grid-template-columns: minmax(0, 1fr); padding-left: var(--s5); }
+.guide-field { text-align: left; }
+.guide-field input { min-height: 56px; }
 .guide-help { margin-top: var(--s4); padding: var(--s4); background: var(--paper); border-radius: var(--r2); text-align: left; }
 .guide-help ol { margin-top: var(--s2); padding-left: 1.3em; }
 .guide-help li + li { margin-top: var(--s2); }

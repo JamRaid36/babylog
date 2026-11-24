@@ -197,13 +197,13 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     d.querySelector('#guideGo').click();
     check('the browser this check runs in is picked by itself', step('install') && d.querySelector('[data-browser="chrome"]').getAttribute('aria-pressed') === 'true');
     d.querySelector('[data-browser="safari"]').click();
-    check("tapping Safari shows its five Home Screen steps", d.querySelectorAll('.guide-list li').length === 5 && d.querySelector('[data-browser="safari"]').getAttribute('aria-pressed') === 'true');
-    check('the Safari steps name the real buttons', ['menu button', '"Share"', 'Add to Home Screen', 'Edit Actions', 'Open as Web App', 'Tap "Add"', 'Look for this picture'].every((t) => d.querySelector('.guide-list').textContent.includes(t)), d.querySelector('.guide-list').textContent);
+    check("tapping Safari shows its five Home Screen steps", d.querySelectorAll('#guideList li').length === 5 && d.querySelector('[data-browser="safari"]').getAttribute('aria-pressed') === 'true');
+    check('the Safari steps name the real buttons', ['menu button', '"Share"', 'Add to Home Screen', 'Edit Actions', 'Open as Web App', 'Tap "Add"', 'Look for this picture'].every((t) => d.querySelector('#guideList').textContent.includes(t)), d.querySelector('#guideList').textContent);
     d.querySelector('[data-browser="chrome"]').click();
-    check('tapping Chrome swaps in its four steps', d.querySelectorAll('.guide-list li').length === 4 && d.querySelector('.guide-list').textContent.includes('right end of the web address bar') && !d.querySelector('.guide-list').textContent.includes('Open as Web App'));
-    check('every step has its picture', d.querySelectorAll('.guide-list .guide-pic svg, .guide-list .guide-pic img, .guide-list .guide-pic span').length === 4);
+    check('tapping Chrome swaps in its four steps', d.querySelectorAll('#guideList li').length === 4 && d.querySelector('#guideList').textContent.includes('right end of the web address bar') && !d.querySelector('#guideList').textContent.includes('Open as Web App'));
+    check('every step has its picture', d.querySelectorAll('#guideList .guide-pic svg, #guideList .guide-pic img, #guideList .guide-pic span').length === 4);
     d.querySelector('[data-browser="safari"]').click();
-    check('and back to Safari', d.querySelectorAll('.guide-list li').length === 5);
+    check('and back to Safari', d.querySelectorAll('#guideList li').length === 5);
     check('it says the shared log comes along', d.querySelector('#guideCarry').textContent === 'Your shared log comes along with it.');
     d.querySelector('.guide-step[data-step="install"] [data-guide="later"]').click();
     check('"Not now" moves on to whose phone', step('who'));
@@ -246,6 +246,7 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     d.querySelector('#guidePaste').value = 'not a link';
     d.querySelector('#guidePasteGo').click();
     check('a wrong paste is refused with a reason', !d.querySelector('#guidePasteError').hidden && !JSON.parse(localStorage.getItem('bl.cfg') || '{}').token);
+    check('the Connect screen says what to paste, in three steps', d.querySelectorAll('.guide-step[data-step="connect"] .guide-list li').length === 3 && d.querySelector('.guide-step[data-step="connect"]').textContent.includes('very first phone'));
     d.querySelector('#guidePaste').value = `Tap this to set up Jubilee. https://x.test/babylog/#s=${code}`;
     d.querySelector('#guidePasteGo').click();
     check('the whole text message pasted in connects it', JSON.parse(localStorage.getItem('bl.cfg')).token === 'invite-key' && !d.querySelector('.guide-step[data-step="who"]').hidden);
@@ -258,6 +259,13 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     d = frame.contentDocument;
     d.querySelector('.guide-step[data-step="connect"] [data-guide="skip-connect"]').click();
     check('Connect can be skipped', !d.querySelector('.guide-step[data-step="who"]').hidden);
+    localStorage.clear();
+    await load('../index.html?as=home&firstphone');
+    d = frame.contentDocument;
+    d.querySelector('#guidePaste').value = 'github_pat_11ABCDEFG0abcdefghijkl_mnopqrstuvwxyz0123456789';
+    d.querySelector('#guidePasteGo').click();
+    const first = JSON.parse(localStorage.getItem('bl.cfg') || '{}');
+    check('the first phone can paste its bare key', first.token === 'github_pat_11ABCDEFG0abcdefghijkl_mnopqrstuvwxyz0123456789' && first.repo === 'JamRaid36/babylog-data', JSON.stringify(first));
   } catch (err) {
     check('the check itself ran', false, String(err && err.stack || err));
   } finally {

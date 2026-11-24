@@ -371,23 +371,21 @@
     <svg class="art welcome-art guide-flower" aria-hidden="true"><use href="#i-flower"/></svg>
     <p class="guide-count">Step 2 of 2</p>
     <h2 class="sheet-title" tabindex="-1">Connect to your family's log</h2>
-    <p class="welcome-lead">One tap, so you both see the same feeds and diapers.</p>
-    <button type="button" class="btn btn-primary btn-big" id="guideConnect">Connect</button>
-    <p class="guide-note">If your phone asks, tap <strong>Paste</strong>.</p>
-    <div class="guide-help" id="guideConnectHelp" hidden>
-      <p><strong>That didn't find it yet.</strong> An easy fix:</p>
-      <ol>
-        <li>Open the text message with the Jubilee link.</li>
-        <li>Press and hold the link, then tap <strong>Copy</strong>.</li>
-        <li>Come back here and tap <strong>Connect</strong> again.</li>
-      </ol>
-      <label class="field">
-        <span class="eyebrow">Or paste the link here</span>
-        <input type="text" id="guidePaste" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <span class="field-error" id="guidePasteError" hidden>That is not a Jubilee link. Ask for a fresh invite.</span>
-      </label>
-      <button type="button" class="btn" id="guidePasteGo">Use this link</button>
-    </div>
+    <p class="welcome-lead">So you both see the same feeds and diapers.</p>
+    <ol class="guide-list guide-list-plain">
+      <li><span><strong>Go to the text message with the Jubilee invite.</strong> Press and hold the link, then tap "Copy".</span></li>
+      <li><span><strong>Come back here and tap the box below.</strong> Tap "Paste".</span></li>
+      <li><span><strong>Tap "Connect".</strong></span></li>
+    </ol>
+    <label class="field guide-field">
+      <span class="eyebrow">Paste the invite link here</span>
+      <input type="text" id="guidePaste" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Tap here, then tap Paste">
+      <span class="field-error" id="guidePasteError" hidden>That is not a Jubilee invite. Copy the whole link from the text message and try again.</span>
+    </label>
+    <button type="button" class="btn btn-primary btn-big" id="guidePasteGo">Connect</button>
+    <button type="button" class="btn" id="guideConnect">Or paste it for me</button>
+    <p class="guide-note" id="guideConnectHelp" hidden>Nothing to paste yet. Copy the invite link from the text message first.</p>
+    <p class="guide-note">Setting up the very first phone? Paste your GitHub key in the box instead.</p>
     <button type="button" class="link-btn guide-skip" data-guide="skip-connect">Skip, use this phone on its own</button>
   </section>
 

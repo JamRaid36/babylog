@@ -355,3 +355,13 @@ test('Home Screen steps per browser: the buttons Apple and Google name', () => {
   assert.equal(C.browserOf('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'), 'safari');
   assert.equal(C.browserOf(undefined), 'safari');
 });
+
+test('connect: the first phone pastes its bare GitHub key; it needs a log to point at', () => {
+  const key = 'github_pat_11ABCDEFG0abcdefghijkl_mnopqrstuvwxyz0123456789';
+  assert.deepEqual(C.findSetup(key, 'me/log'), { t: key, r: 'me/log', b: '' });
+  assert.deepEqual(C.findSetup(`  ${key}\n`, 'me/log'), { t: key, r: 'me/log', b: '' });
+  assert.deepEqual(C.findSetup('ghp_abcdefghijklmnopqrstuvwxyz0123456789', 'me/log').t, 'ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+  assert.equal(C.findSetup(key), null);            // no log named: refused
+  assert.equal(C.findSetup('github_pat_short', 'me/log'), null);
+  assert.equal(C.findSetup('hello there', 'me/log'), null);
+});

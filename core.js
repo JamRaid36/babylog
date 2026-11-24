@@ -65,10 +65,13 @@ export function sameSetup(cfg, setup) {
 }
 
 // Pull our setup out of anything pasted or copied: a whole text message, a link, or the bare code.
-export function findSetup(text) {
+// The very first phone has no invite, only the GitHub key itself: that is accepted too, with the usual log.
+export function findSetup(text, defaultRepo = '') {
   const s = String(text || '').trim();
   const m = /#s=([\w-]+)/.exec(s);
   if (m) return decodeSetup(m[1]);
+  const key = /\b(github_pat_\w{20,}|gh[pousr]_\w{20,})\b/.exec(s);
+  if (key && defaultRepo) return { t: key[1], r: defaultRepo, b: '' };
   return /^[\w-]{20,}$/.test(s) ? decodeSetup(s) : null;
 }
 
