@@ -1,6 +1,6 @@
 {
-  "name": "Baby log",
-  "short_name": "Baby log",
+  "name": "Jubilee",
+  "short_name": "Jubilee",
   "description": "One-tap log of feeds, pees and poops, shared between phones.",
   "start_url": "./",
   "scope": "./",

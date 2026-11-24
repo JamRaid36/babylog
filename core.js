@@ -208,14 +208,14 @@ export function installSteps(url) {
     `Open this link in Safari: ${url}`,
     'Tap the Share button (the square with the arrow pointing up). If you don\'t see it, tap the three dots first.',
     'Scroll down, tap "Add to Home Screen", then tap "Add".',
-    'Open "Baby log" from your Home Screen, not from Safari.',
+    'Open "Jubilee" from your Home Screen, not from Safari.',
     'To share one log between phones: tap the gear, paste the setup link you were sent into "Sync key or setup link", then tap "Save settings".',
   ];
 }
 
 export function installText(url) {
   const steps = installSteps(url).map((s, i) => `${i + 1}. ${s}`);
-  return ['Baby log: one tap to log a feed, pee or poop. To put it on your iPhone:', '', ...steps].join('\n');
+  return ['Jubilee: one tap to log a feed, pee or poop. To put it on your iPhone:', '', ...steps].join('\n');
 }
 
 // Keep only fields we know, with sane types, before an entry is saved or accepted from sync.
