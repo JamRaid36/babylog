@@ -15,8 +15,10 @@
 //     ml  millilitres, when it was entered in mL. `ml` is then the real number, and `oz` is written
 //         beside it (ml / 29.5735, two decimals) only so a phone still running an older copy of
 //         the app, which knows nothing of `ml`, keeps the amount instead of dropping it.
+//   feed from a bottle only: donor true when it was donor milk; optional
 //   note free text, optional
 
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 export const KINDS = ['feed', 'pee', 'poop', 'pump'];
 export const KIND_LABEL = { feed: 'Feed', pee: 'Pee', poop: 'Poop', pump: 'Pump' };
 const TIMED = ['feed', 'pump']; // the kinds that last a while and can carry minutes and ounces
@@ -185,7 +187,7 @@ export function summarize(events, now = Date.now()) {
     if (!last[e.k]) last[e.k] = e;
     if (now - e.t < DAY) day[e.k] += 1;
   }
-  return { last, day };
+  return { last, day, drank: intake(events.filter((e) => e.t <= now + MIN && now - e.t < DAY)) };
 }
 
 // "just now", "12m", "1h 05m", "2d 3h"
@@ -230,10 +232,41 @@ export function fromLocalInput(value) {
   return Number.isFinite(ts) ? ts : null;
 }
 
+// What she drank from bottles across these entries. Breast feeds carry no amount and are not in it.
+//   ml        total, in mL (an amount entered in ounces counts as ounces x 29.5735)
+//   donorMl   the part of it marked donor milk
+//   bottles   how many bottle feeds
+//   unmeasured  how many of those have no amount, so the total is known to be short
+export function intake(events) {
+  const sum = { ml: 0, donorMl: 0, bottles: 0, unmeasured: 0 };
+  for (const e of events) {
+    if (!e || e.x || e.k !== 'feed' || e.side !== 'bottle') continue;
+    sum.bottles += 1;
+    const unit = amountUnit(e);
+    if (!unit) { sum.unmeasured += 1; continue; }
+    const ml = unit === 'ml' ? e.ml : e.oz * ML_PER_OZ;
+    sum.ml += ml;
+    if (e.donor) sum.donorMl += ml;
+  }
+  return sum;
+}
+const showAmount = (ml, unit) => (unit === 'ml' ? `${Math.round(ml)} mL` : `${Math.round((ml / ML_PER_OZ) * 10) / 10} oz`);
+// "142 mL from 4 bottles · 60 mL donor milk · 1 bottle with no amount", or "" when there was no bottle.
+export function intakeText(sum, unit = 'oz') {
+  if (!sum || !sum.bottles) return '';
+  const measured = sum.bottles - sum.unmeasured;
+  const parts = [];
+  if (measured) parts.push(`${showAmount(sum.ml, unit)} from ${plural(measured, 'bottle', 'bottles')}`);
+  if (sum.donorMl > 0) parts.push(`${showAmount(sum.donorMl, unit)} donor milk`);
+  if (sum.unmeasured) parts.push(`${plural(sum.unmeasured, 'bottle', 'bottles')} with no amount`);
+  return parts.join(' · ');
+}
+
 // The small line under an entry: "Left · 15 min", "Bottle · 2.5 oz", "Bottle · 45 mL", or "".
 export function detail(e) {
   const parts = [];
   if (e.k === 'feed' && e.side && SIDE_DETAIL[e.side]) parts.push(SIDE_DETAIL[e.side]);
+  if (e.k === 'feed' && e.side === 'bottle' && e.donor) parts.push('Donor milk');
   if (TIMED.includes(e.k)) {
     if (amountText(e)) parts.push(amountText(e));
     if (e.min > 0) parts.push(`${e.min} min`);
@@ -258,7 +291,6 @@ export function groupByDay(events, now = Date.now()) {
   return groups;
 }
 
-const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 export function tally(count) {
   return [
@@ -276,7 +308,7 @@ function csvCell(v) {
 
 export function toCsv(events) {
   // 'ounces' and 'mL' each hold only what was entered in that unit; nothing is converted.
-  const rows = [['date', 'time', 'type', 'side', 'minutes', 'ounces', 'mL', 'note', 'logged by']];
+  const rows = [['date', 'time', 'type', 'side', 'minutes', 'ounces', 'mL', 'milk', 'note', 'logged by']];
   for (const e of live(events).reverse()) {
     rows.push([
       dayKey(e.t), toLocalInput(e.t).slice(11), e.k,
@@ -284,6 +316,7 @@ export function toCsv(events) {
       TIMED.includes(e.k) ? (e.min || '') : '',
       TIMED.includes(e.k) && amountUnit(e) === 'oz' ? e.oz : '',
       TIMED.includes(e.k) && amountUnit(e) === 'ml' ? e.ml : '',
+      e.k === 'feed' && e.side === 'bottle' && e.donor ? 'donor' : '',
       e.note || '', e.by || '',
     ]);
   }
@@ -374,6 +407,7 @@ export function clean(e) {
   if (typeof e.by === 'string' && e.by) out.by = e.by.slice(0, 40);
   if (e.x) out.x = true;
   if (e.k === 'feed' && e.side in SIDE_LABEL) out.side = e.side;
+  if (out.side === 'bottle' && e.donor) out.donor = true; // donor milk only comes in a bottle
   if (TIMED.includes(e.k)) {
     if (Number.isFinite(e.min) && e.min > 0) out.min = Math.min(Math.round(e.min), 600);
     if (Number.isFinite(e.ml) && e.ml > 0) {

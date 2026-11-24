@@ -319,9 +319,53 @@ test('how much in the spreadsheet: ounces and mL each in their own column, as en
     C.clean(ev('2026-11-24-c2', 'pump', T0 + 60e3, T0, { oz: 2.5, min: 10 })),
   ]);
   const [head, first, second] = csv.trim().split('\n');
-  assert.equal(head, 'date,time,type,side,minutes,ounces,mL,note,logged by');
+  assert.equal(head, 'date,time,type,side,minutes,ounces,mL,milk,note,logged by');
   assert.ok(first.includes('feed,Bottle,,,37,'), first);
   assert.ok(second.includes('pump,,10,2.5,,'), second);
+});
+
+test('what she drank: bottles only, added up honestly', () => {
+  const b = (n, extra) => C.clean(ev(`2026-11-24-i${n}`, 'feed', T0 + n * 60e3, T0, { side: 'bottle', ...extra }));
+  const day = [
+    b(1, { ml: 37, donor: true }),
+    b(2, { ml: 45 }),
+    b(3, { oz: 1 }),                                                        // entered in ounces
+    b(4, {}),                                                               // a bottle nobody measured
+    C.clean(ev('2026-11-24-i5', 'feed', T0, T0, { side: 'L', min: 20 })),   // breast: no amount to add
+    C.clean(ev('2026-11-24-i6', 'pump', T0, T0, { ml: 60 })),               // pumped, not drunk
+    { ...b(7, { ml: 500 }), x: true },                                      // deleted
+  ];
+  const sum = C.intake(day);
+  assert.equal(sum.bottles, 4);
+  assert.equal(sum.unmeasured, 1);
+  assert.equal(sum.donorMl, 37);
+  assert.ok(Math.abs(sum.ml - (37 + 45 + 29.5735)) < 1e-9);
+  assert.equal(C.intakeText(sum, 'ml'), '112 mL from 3 bottles · 37 mL donor milk · 1 bottle with no amount');
+  assert.equal(C.intakeText(sum, 'oz'), '3.8 oz from 3 bottles · 1.3 oz donor milk · 1 bottle with no amount');
+  // all in mL: the total is the plain sum
+  assert.equal(C.intakeText(C.intake([b(1, { ml: 37 }), b(2, { ml: 45 })]), 'ml'), '82 mL from 2 bottles');
+  assert.equal(C.intakeText(C.intake([b(1, { ml: 37 })]), 'ml'), '37 mL from 1 bottle');
+  // nothing measured is said, not shown as zero
+  assert.equal(C.intakeText(C.intake([b(4, {})]), 'ml'), '1 bottle with no amount');
+  // no bottles: no line at all
+  assert.equal(C.intakeText(C.intake([day[4], day[5]]), 'ml'), '');
+  // the front page counts the last 24 hours only
+  const now = T0 + 10 * 60e3;
+  const old = C.clean(ev('2026-11-23-i8', 'feed', now - 25 * 3600e3, T0, { side: 'bottle', ml: 90 }));
+  assert.equal(C.intakeText(C.summarize([b(1, { ml: 37 }), old], now).drank, 'ml'), '37 mL from 1 bottle');
+});
+
+test('donor milk: a mark on a bottle feed, and only there', () => {
+  const d = C.clean(ev('2026-11-24-d1', 'feed', T0, T0, { side: 'bottle', ml: 30, donor: true }));
+  assert.equal(d.donor, true);
+  assert.equal(C.detail(d), 'Bottle · Donor milk · 30 mL');
+  assert.deepEqual(C.clean(d), d);
+  assert.equal(C.clean(ev('2026-11-24-d2', 'feed', T0, T0, { side: 'bottle', donor: false })).donor, undefined);
+  assert.equal(C.clean(ev('2026-11-24-d3', 'feed', T0, T0, { side: 'L', donor: true })).donor, undefined);
+  assert.equal(C.clean(ev('2026-11-24-d4', 'pump', T0, T0, { donor: true })).donor, undefined);
+  assert.equal(C.clean({ ...d, side: 'R' }).donor, undefined); // moved to a breast: the mark goes
+  const row = C.toCsv([d]).trim().split('\n')[1];
+  assert.ok(row.includes('feed,Bottle,,,30,donor,'), row);
 });
 
 test('how much: only where it means something, in half ounces', () => {

@@ -157,6 +157,7 @@
   <p class="next-side" id="nextSide" hidden></p>
 
   <p class="tally"><span class="eyebrow">Last 24 hours</span> <span id="tally">0 feeds &middot; 0 pees &middot; 0 poops</span></p>
+  <p class="tally tally-drank" id="intakeLine" hidden><span class="eyebrow">She drank, last 24 hours</span> <span id="intake"></span></p>
 
   <p class="notice" id="notice" hidden></p>
 
@@ -195,6 +196,9 @@
   </div>
   <div id="trayAmount" hidden>
     <p class="eyebrow tray-label" id="trayAmountLabel">How much</p>
+    <div class="milk-pick" id="trayMilk" hidden>
+      <button type="button" class="chip" id="trayDonor" aria-pressed="false">Donor milk</button>
+    </div>
     <div class="unit-pick" role="group" aria-label="Measure in">
       <button type="button" class="chip" data-unit="oz" aria-pressed="true" aria-label="Measure in ounces">oz</button>
       <button type="button" class="chip" data-unit="ml" aria-pressed="false" aria-label="Measure in millilitres">mL</button>
@@ -296,6 +300,10 @@
           <input type="number" id="editAmount" name="amount" autocomplete="off" inputmode="decimal" min="0" max="99" step="0.25">
         </label>
       </div>
+      <fieldset class="seg seg-2 seg-tight" id="editMilk">
+        <legend class="eyebrow">What milk (optional)</legend>
+        <label><input type="checkbox" name="donor"><span>Donor milk</span></label>
+      </fieldset>
       <fieldset class="seg seg-2 seg-tight">
         <legend class="eyebrow">Measured in</legend>
         <label><input type="radio" name="unit" value="oz" checked><span>Ounces</span></label>
@@ -463,7 +471,8 @@
       <li>That's it. It's saved with the time.</li>
     </ol>
     <p>After a <strong>Feed</strong>, two big buttons ask which side she <strong>started on</strong>: tap <strong>Left</strong> or <strong>Right</strong> (or <strong>Bottle</strong>). One tap, no typing. The front page then tells you which side to start on next time.</p>
-    <p>After a <strong>Bottle</strong> feed or a <strong>Pump</strong>, the tray asks how much. Tap <strong>oz</strong> or <strong>mL</strong> first, whichever you measure in; this phone remembers. Then tap an amount, or nudge it to the exact number.</p>
+    <p>After a <strong>Bottle</strong> feed or a <strong>Pump</strong>, the tray asks how much. Tap <strong>oz</strong> or <strong>mL</strong> first, whichever you measure in; this phone remembers. Then tap an amount, or nudge it to the exact number. For a bottle of donor milk, tap <strong>Donor milk</strong> too.</p>
+    <p>The front page adds up what she drank from bottles in the last 24 hours, and each day in the list has its own total. A bottle with no amount is called out, so you know the total is short.</p>
     <p>The little tray that pops up also lets you <strong>Undo</strong> or say it happened earlier. Ignore it and it goes away.</p>
   </section>
 

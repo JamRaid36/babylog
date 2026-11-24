@@ -86,6 +86,9 @@ function renderSince() {
     $(subSel).textContent = e ? `${C.clock(e.t)}${extra}` : 'None yet';
   }
   $('#tally').textContent = C.tally(s.day);
+  const drank = C.intakeText(s.drank, unitNow());
+  $('#intakeLine').hidden = !drank;
+  $('#intake').textContent = drank;
   renderRunning(now);
   const side = C.nextSide(Object.values(state.events), now);
   const line = $('#nextSide');
@@ -161,6 +164,7 @@ function renderLog() {
     const day = el('section', 'day');
     const head = el('div', 'day-head');
     head.append(el('h3', 'day-name', g.label), el('p', 'day-count', C.tally(g.count)));
+    const drank = C.intakeText(C.intake(g.items), unitNow());
     const list = el('ul', 'rows');
     for (const e of g.items) {
       const li = el('li');
@@ -181,7 +185,9 @@ function renderLog() {
       li.append(row);
       list.append(li);
     }
-    day.append(head, list);
+    day.append(head);
+    if (drank) day.append(el('p', 'day-drank', drank));
+    day.append(list);
     box.append(day);
   }
 }
@@ -281,6 +287,8 @@ function paintTray() {
   $('#trayAmountLabel').textContent = e.k === 'pump' ? 'How much did you get' : 'How much did she drink';
   const unit = unitNow();
   const entered = C.amountUnit(e);
+  $('#trayMilk').hidden = e.k !== 'feed';
+  $('#trayDonor').setAttribute('aria-pressed', String(!!e.donor));
   for (const chip of document.querySelectorAll('#trayAmount .chip[data-unit]')) chip.setAttribute('aria-pressed', String(chip.dataset.unit === unit));
   for (const box of document.querySelectorAll('#trayAmount [data-for-unit]')) box.hidden = box.dataset.forUnit !== unit;
   for (const chip of document.querySelectorAll('#trayAmount .chip[data-oz]')) chip.setAttribute('aria-pressed', String(entered === 'oz' && Number(chip.dataset.oz) === e.oz));
@@ -297,9 +305,11 @@ $('#tray').addEventListener('click', (ev) => {
   else if (chip.dataset.side) {
     const side = e.side === chip.dataset.side ? undefined : chip.dataset.side;
     put(side === 'bottle' ? { ...e, side } : C.withAmount({ ...e, side }, '', 0)); // an amount belongs to a bottle
-  } else if (chip.dataset.unit) { // oz or mL: this phone remembers it; the amount already saved is left as it was entered
+  } else if (chip.id === 'trayDonor') put({ ...e, donor: !e.donor });
+  else if (chip.dataset.unit) { // oz or mL: this phone remembers it; the amount already saved is left as it was entered
     cfg = { ...cfg, unit: chip.dataset.unit };
     store.set('bl.cfg', cfg);
+    render(); // the totals follow the unit
   } else if (chip.dataset.oz) {
     const n = Number(chip.dataset.oz);
     put(C.withAmount(e, 'oz', C.amountUnit(e) === 'oz' && e.oz === n ? 0 : n)); // the same amount again clears it
@@ -334,6 +344,8 @@ function showFeedFields() {
   const kind = $('#editForm').elements.kind.value;
   $('#feedFields').hidden = kind !== 'feed' && kind !== 'pump';
   $('#editSide').hidden = kind !== 'feed';
+  const bottle = document.querySelector('#editForm input[name="side"][value="bottle"]').checked;
+  $('#editMilk').hidden = kind !== 'feed' || !bottle; // donor milk only comes in a bottle
 }
 
 function openEdit(id) {
@@ -345,6 +357,7 @@ function openEdit(id) {
   $('#editWhen').value = C.toLocalInput(e.t);
   $('#editWhenError').hidden = true;
   setSideBoxes(e.side);
+  $('#editForm').elements.donor.checked = !!e.donor;
   $('#editMin').value = e.min || '';
   const editUnit = C.amountUnit(e) || unitNow(); // an amount opens in the unit it was entered in
   $('#editForm').elements.unit.value = editUnit;
@@ -369,6 +382,7 @@ $('#editForm').addEventListener('change', (ev) => {
   if (ev.target.name === 'kind') showFeedFields();
   if (ev.target.name === 'unit') paintEditUnit(); // the number typed stays; only what it is measured in changes
   if (ev.target.name === 'side' && ev.target.checked) setSideBoxes(ev.target.value); // one side at most
+  if (ev.target.name === 'side') showFeedFields();
 });
 
 $('#editForm').addEventListener('submit', (ev) => {
@@ -389,6 +403,7 @@ $('#editForm').addEventListener('submit', (ev) => {
   put(C.withAmount({
     id: e.id, by: e.by, k: kind, t,
     side: kind === 'feed' && side ? side.value : undefined,
+    donor: $('#editForm').elements.donor.checked, // kept only on a bottle feed
     min: timed ? Number($('#editMin').value) : undefined,
     note: $('#editNote').value,
   }, $('#editForm').elements.unit.value, timed ? $('#editAmount').value : 0));
@@ -832,6 +847,7 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'tray') logNow('feed');
   if (show === 'pump') logNow('pump');
   if (show === 'pump-ml') { cfg = { ...cfg, unit: 'ml' }; logNow('pump'); }
+  if (show === 'bottle-ml') { cfg = { ...cfg, unit: 'ml', feed: 'bottle' }; const e = put({ id: C.newId(), k: 'feed', t: Date.now(), by: cfg.me, side: 'bottle', ml: 37, donor: true }); openTray(e.id); }
   if (show === 'edit') openEdit(C.live(Object.values(state.events))[0].id);
   if (show === 'settings') openSettings();
   if (show === 'help') openHelp();

@@ -230,6 +230,35 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     qq('#editSave').click();
     check('emptying the box clears the amount', !(d.querySelector('.row .row-detail')?.textContent || '').match(/oz|mL/), d.querySelector('.row .row-detail')?.textContent);
 
+    // ── donor milk, and what she drank ──
+    await load('../index.html?demo&donor');
+    d = frame.contentDocument;
+    check('the sample bottle is added up on the front page, in ounces', !qq('#intakeLine').hidden && qq('#intake').textContent === '2 oz from 1 bottle', qq('#intake').textContent);
+    qq('.act[data-log="pump"]').click();
+    check('a pump is not asked about donor milk', qq('#trayMilk').hidden);
+    qq('#trayDone').click();
+    qq('.act[data-log="feed"]').click();
+    qq('#traySide .chip[data-side="bottle"]').click();
+    check('a bottle feed offers Donor milk', !qq('#trayMilk').hidden && qq('#trayDonor').getAttribute('aria-pressed') === 'false');
+    check('a bottle with no amount is called out', qq('#intake').textContent === '2 oz from 1 bottle · 1 bottle with no amount', qq('#intake').textContent);
+    qq('#trayAmount .chip[data-unit="ml"]').click();
+    qq('#trayAmount .chip[data-ml="30"]').click();
+    qq('#trayDonor').click();
+    const topFeed = () => [...d.querySelectorAll('.row')].find((r) => r.querySelector('.row-kind').textContent === 'Feed');
+    check('one tap marks it donor milk', qq('#trayDonor').getAttribute('aria-pressed') === 'true' && topFeed().querySelector('.row-detail').textContent === 'Bottle · Donor milk · 30 mL', topFeed().textContent);
+    check('the front page total follows, in mL once mL is picked', qq('#intake').textContent === '89 mL from 2 bottles · 30 mL donor milk', qq('#intake').textContent);
+    check('each day in the list has its own total', d.querySelector('.day .day-drank')?.textContent.includes('donor milk'), d.querySelector('.day .day-drank')?.textContent);
+    qq('#trayDonor').click();
+    check('tapping it again takes the mark off', topFeed().querySelector('.row-detail').textContent === 'Bottle · 30 mL');
+    qq('#trayDonor').click();
+    qq('#trayDone').click();
+    topFeed().click();
+    check('editing shows the donor mark', qq('#editSheet').open && !qq('#editMilk').hidden && qq('#editForm').elements.donor.checked);
+    d.querySelector('#editForm input[name="side"][value="L"]').click();
+    check('a breast feed has no donor box', qq('#editMilk').hidden);
+    qq('#editSave').click();
+    check('moved to a breast, the mark and the amount leave the total', topFeed().querySelector('.row-detail').textContent.startsWith('Started left') && !topFeed().textContent.includes('Donor') && qq('#intake').textContent === '59 mL from 1 bottle', `${topFeed().textContent} | ${qq('#intake').textContent}`);
+
     // ── mL is remembered on this phone, and saved exactly ──
     localStorage.clear();
     await load('../index.html?ml');
