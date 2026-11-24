@@ -127,8 +127,8 @@ function renderLog() {
 
 function renderHeader() {
   const name = cfg.baby.trim();
-  $('#babyName').textContent = name || 'Baby log';
-  document.title = name ? `${name} · log` : 'Baby log';
+  $('#babyName').textContent = name || 'Jubilee';
+  document.title = name ? `${name} · log` : 'Jubilee';
   const btn = $('#syncBtn');
   btn.dataset.state = syncInfo.state;
   $('#syncText').textContent = syncInfo.text;
@@ -377,7 +377,7 @@ $('#setCancel').addEventListener('click', () => settingsSheet.close());
 $('#setShare').addEventListener('click', async () => {
   const link = `${location.origin}${location.pathname}#s=${C.encodeSetup({ t: cfg.token, r: cfg.repo, b: cfg.baby })}`;
   try {
-    if (navigator.share) await navigator.share({ title: 'Baby log setup', text: 'Open this once to share the baby log:', url: link });
+    if (navigator.share) await navigator.share({ title: 'Jubilee setup', text: 'Open this once to share the baby log:', url: link });
     else { await navigator.clipboard.writeText(link); toast('Setup link copied. Send it to the other phone.'); }
   } catch (err) {
     if (err && err.name !== 'AbortError') toast('Could not share the link from this browser.');

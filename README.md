@@ -1,4 +1,4 @@
-# Baby log
+# Jubilee
 
 One-tap log of feeds, pees and poops, shared between two phones.
 

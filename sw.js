@@ -1,6 +1,6 @@
 // Keeps the app opening with no signal. Network first, so a new version shows up on the next open;
 // the saved copy is only used when the network fails. Requests to GitHub's API are never touched.
-const CACHE = 'babylog-v2';
+const CACHE = 'babylog-v2j';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'sync.js', 'manifest.webmanifest', 'baby-180.png', 'baby-512.png'];
 
 self.addEventListener('install', (event) => {
