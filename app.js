@@ -62,13 +62,94 @@ function put(e) {
   return saved;
 }
 
-function logNow(kind) {
-  const e = put({ id: C.newId(), k: kind, t: Date.now(), by: cfg.me, ...(kind === 'feed' ? C.feedDefaults(cfg) : {}) });
-  if (!e) return;
+// ── Taps waiting for Save ───────────────────────────────────────────────────────────────────────
+// A tap on Feed, Pee, Poop or Pump logs nothing by itself. It makes a draft: kept on this phone only,
+// never counted, never shared. Save turns it into a real entry; Discard throws it away. A draft nobody
+// answered is not lost: it waits at the top of the front page, across closing and reopening the app.
+//   base: the moment of the tap ("15 min ago" counts back from it).  e: the entry it would become.
+let drafts = DEMO ? [] : store.get('bl.drafts', [])
+  .map((d) => ({ base: Number(d && d.base), e: C.clean(d && d.e) }))
+  .filter((d) => d.e && !d.e.x && Number.isFinite(d.base) && !state.events[d.e.id]);
+const draftOf = (id) => drafts.find((d) => d.e.id === id);
+function keepDrafts() {
+  if (!store.set('bl.drafts', drafts)) toast('This phone is out of storage space. Tap Save now so this one is not lost.');
+}
+function setDraft(e) {
+  const d = draftOf(e.id);
+  const c = C.clean({ ...e, u: Date.now() });
+  if (!d || !c) return;
+  d.e = c;
+  keepDrafts();
+}
+function dropDraft(id) {
+  const d = draftOf(id);
+  drafts = drafts.filter((x) => x.e.id !== id);
+  keepDrafts();
+  if (trayId === id) closeTray(); else renderWaiting();
+  return d;
+}
+// The only way a tap becomes an entry.
+function saveDraft(id) {
+  const d = dropDraft(id);
+  if (!d) return null;
   store.set('bl.untimed', '');
-  flashButton(kind);
+  const saved = put(d.e);
+  if (!saved) return null;
+  flashButton(saved.k);
+  toast(`${C.KIND_LABEL[saved.k]} saved · ${C.clock(saved.t)}`, 'Undo', () => { if (state.events[saved.id]) put({ ...state.events[saved.id], x: true }); });
+  return saved;
+}
+function discardDraft(id) {
+  const d = dropDraft(id);
+  if (!d) return;
+  toast(`${C.KIND_LABEL[d.e.k]} not saved.`, 'Bring it back', () => { drafts.push(d); keepDrafts(); renderWaiting(); });
+}
+
+function logNow(kind) {
+  const now = Date.now();
+  const e = C.clean({ id: C.newId(), k: kind, t: now, u: now, by: cfg.me, ...(kind === 'feed' ? C.feedDefaults(cfg) : {}) });
+  if (!e) return;
+  drafts.push({ base: now, e });
+  keepDrafts();
   openTray(e.id);
 }
+
+// The drafts not open in the tray right now, each asking for its answer.
+function renderWaiting() {
+  const box = $('#waiting');
+  box.replaceChildren();
+  for (const d of drafts) {
+    if (d.e.id === trayId) continue;
+    const card = el('div', 'waiting');
+    card.dataset.id = d.e.id;
+    const text = el('p', 'waiting-text');
+    const extra = C.detail(d.e);
+    text.append(el('strong', '', `Save this ${C.KIND_LABEL[d.e.k].toLowerCase()} from ${C.clock(d.e.t)}?`),
+      el('span', '', extra ? `${extra}. It is not in the log yet.` : 'It is not in the log yet.'));
+    const save = el('button', 'btn btn-primary', 'Save');
+    save.type = 'button';
+    save.dataset.waiting = 'save';
+    const no = el('button', 'btn', 'No, discard');
+    no.type = 'button';
+    no.dataset.waiting = 'discard';
+    const more = el('button', 'link-btn', 'Add details first');
+    more.type = 'button';
+    more.dataset.waiting = 'open';
+    const actions = el('div', 'waiting-actions');
+    actions.append(save, no);
+    card.append(text, actions, more);
+    box.append(card);
+  }
+}
+$('#waiting').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-waiting]');
+  const card = ev.target.closest('.waiting');
+  if (!btn || !card) return;
+  const id = card.dataset.id;
+  if (btn.dataset.waiting === 'save') saveDraft(id);
+  else if (btn.dataset.waiting === 'discard') discardDraft(id);
+  else openTray(id);
+});
 
 // ── Screen ──────────────────────────────────────────────────────────────────────────────────────
 const SINCE = { feed: ['#sinceFeed', '#sinceFeedSub'], pee: ['#sincePee', '#sincePeeSub'], poop: ['#sincePoop', '#sincePoopSub'], pump: ['#sincePump', '#sincePumpSub'] };
@@ -156,7 +237,7 @@ function renderLog() {
   if (!groups.length) {
     const empty = el('div', 'empty');
     empty.append(art('baby'), el('p', 'empty-title', 'Nothing logged yet'),
-      el('p', 'empty-text', 'Tap Feed, Pee or Poop below the moment it happens. One tap saves it with the time.'));
+      el('p', 'empty-text', 'Tap Feed, Pee or Poop below the moment it happens, then tap Save. It keeps the time of your first tap.'));
     box.append(empty);
     return;
   }
@@ -231,13 +312,14 @@ function render() {
   renderInvite();
   renderSince();
   renderLog();
+  renderWaiting();
 }
 
 function flashButton(kind) {
   const btn = document.querySelector(`.act[data-log="${kind}"]`);
   const label = btn.querySelector('.act-label');
   btn.classList.add('is-logged');
-  label.textContent = 'Logged';
+  label.textContent = 'Saved';
   setTimeout(() => { btn.classList.remove('is-logged'); label.textContent = C.KIND_LABEL[kind]; }, 1100);
 }
 
@@ -255,29 +337,29 @@ function toast(text, actionLabel, action) {
 }
 function hideToast() { clearTimeout(toastTimer); $('#toast').hidden = true; }
 
-// ── Tray: optional extras right after a tap ─────────────────────────────────────────────────────
+// ── Tray: what a tap opens. Save or Discard; the extras in between are optional ────────────────
 let trayId = null;
 let trayBase = 0; // the moment of the tap; "15 min ago" counts back from here
-let trayTimer = null;
 
+// The tray never closes by itself: an unanswered tap would otherwise vanish without a word.
 function openTray(id) {
-  const e = state.events[id];
-  if (!e) return;
+  const d = draftOf(id);
+  if (!d) return;
   hideToast();
   trayId = id;
-  trayBase = e.t;
+  trayBase = d.base;
   paintTray();
   $('#tray').hidden = false;
-  // a question worth its one tap (which side, how much) keeps the tray up longer
-  armTray((e.k === 'feed' && !e.side) || C.hasAmount(e) ? 30000 : 9000);
+  renderWaiting();
 }
-function armTray(ms) { clearTimeout(trayTimer); trayTimer = setTimeout(closeTray, ms); }
-function closeTray() { clearTimeout(trayTimer); trayId = null; $('#tray').hidden = true; }
+function closeTray() { trayId = null; $('#tray').hidden = true; renderWaiting(); }
 
 function paintTray() {
-  const e = state.events[trayId];
+  const e = draftOf(trayId)?.e;
   if (!e) return closeTray();
-  $('#trayTitle').textContent = `${C.KIND_LABEL[e.k]} saved · ${C.clock(e.t)}`;
+  $('#trayTitle').textContent = `${C.KIND_LABEL[e.k]} · ${C.clock(e.t)}`;
+  $('#trayWhat').textContent = C.detail(e);
+  $('#traySave').textContent = `Save ${C.KIND_LABEL[e.k].toLowerCase()}`;
   const back = Math.round((trayBase - e.t) / 60e3);
   for (const chip of document.querySelectorAll('#trayWhen .chip')) chip.setAttribute('aria-pressed', String(Number(chip.dataset.back) === back));
   $('#traySide').hidden = e.k !== 'feed';
@@ -299,8 +381,9 @@ function paintTray() {
 
 $('#tray').addEventListener('click', (ev) => {
   const chip = ev.target.closest('.chip');
-  const e = state.events[trayId];
+  const e = draftOf(trayId)?.e;
   if (!chip || !e) return;
+  const put = setDraft; // in here every change goes to the draft, never to the log
   if (chip.dataset.back !== undefined) put({ ...e, t: trayBase - Number(chip.dataset.back) * 60e3 });
   else if (chip.dataset.side) {
     const side = e.side === chip.dataset.side ? undefined : chip.dataset.side;
@@ -319,18 +402,12 @@ $('#tray').addEventListener('click', (ev) => {
   } else if (chip.dataset.step) put(C.withAmount(e, 'oz', C.stepOz(C.amountIn(e, 'oz'), Number(chip.dataset.step))));
   else if (chip.dataset.stepMl) put(C.withAmount(e, 'ml', C.stepMl(C.amountIn(e, 'ml'), Number(chip.dataset.stepMl))));
   paintTray();
-  armTray(12000);
 });
-$('#trayUndo').addEventListener('click', () => {
-  const e = state.events[trayId];
-  closeTray();
-  if (e) { put({ ...e, x: true }); toast(`${C.KIND_LABEL[e.k]} removed.`); }
-});
-$('#trayMore').addEventListener('click', () => { const id = trayId; closeTray(); openEdit(id); });
-$('#trayDone').addEventListener('click', closeTray);
-// someone moving through the tray by keyboard or switch control is not timed out of it
-$('#tray').addEventListener('focusin', () => clearTimeout(trayTimer));
-$('#tray').addEventListener('focusout', () => armTray(9000));
+$('#traySave').addEventListener('click', () => saveDraft(trayId));
+$('#trayDiscard').addEventListener('click', () => discardDraft(trayId));
+// a note or an exact time is typed on the edit sheet, which works on real entries: so save it first
+$('#trayMore').addEventListener('click', () => { const saved = saveDraft(trayId); if (saved) { hideToast(); openEdit(saved.id); } });
+$('#trayDone').addEventListener('click', closeTray); // "Not now": it waits on the front page
 
 // ── Edit sheet ──────────────────────────────────────────────────────────────────────────────────
 let editId = null;
@@ -847,7 +924,7 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'tray') logNow('feed');
   if (show === 'pump') logNow('pump');
   if (show === 'pump-ml') { cfg = { ...cfg, unit: 'ml' }; logNow('pump'); }
-  if (show === 'bottle-ml') { cfg = { ...cfg, unit: 'ml', feed: 'bottle' }; const e = put({ id: C.newId(), k: 'feed', t: Date.now(), by: cfg.me, side: 'bottle', ml: 37, donor: true }); openTray(e.id); }
+  if (show === 'bottle-ml') { cfg = { ...cfg, unit: 'ml', feed: 'bottle' }; logNow('feed'); setDraft({ ...draftOf(trayId).e, ml: 37, donor: true }); paintTray(); }
   if (show === 'edit') openEdit(C.live(Object.values(state.events))[0].id);
   if (show === 'settings') openSettings();
   if (show === 'help') openHelp();
@@ -855,5 +932,17 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
 }
 
 if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // A phone that only brings the app back from the background never reloads it, so: look for a new
+  // version each time the app comes to the front, and when one takes over, reload once. Unsaved taps are
+  // kept on the phone and come back; an open sheet (typing in progress) is never interrupted.
+  const hadWorker = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => {
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+  }).catch(() => {});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadWorker || reloaded || document.querySelector('dialog[open]')) return;
+    reloaded = true;
+    location.reload();
+  });
 }

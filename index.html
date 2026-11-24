@@ -101,6 +101,9 @@
     <p class="cheer-line">and you are amazing parents.</p>
     <p class="cheer-line cheer-last">You can do this!</p>
   </section>
+
+  <!-- Taps that were never answered with Save or Discard. Filled in by app.js. -->
+  <div id="waiting" aria-live="polite"></div>
   <!-- Shown in Safari on an iPhone until the app is on the Home Screen. -->
   <div class="nudge" id="nudge" hidden>
     <svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>
@@ -188,12 +191,13 @@
   </section>
 </main>
 
-<!-- Appears for a few seconds after a tap: undo, back-date, or add detail. Nothing here is required. -->
+<!-- Opens on a tap and stays until it is answered. Nothing is in the log until Save. The extras are optional. -->
 <aside class="tray" id="tray" hidden aria-live="polite">
   <div class="tray-head">
     <p class="tray-title" id="trayTitle"></p>
-    <button type="button" class="link-btn" id="trayUndo">Undo</button>
+    <button type="button" class="link-btn" id="trayDiscard">Discard</button>
   </div>
+  <p class="tray-unsaved"><strong>Not saved yet.</strong> <span id="trayWhat"></span></p>
   <div id="traySide" hidden>
     <p class="eyebrow tray-label" id="traySideLabel">Started on</p>
     <div class="chips chips-big" role="group" aria-labelledby="traySideLabel">
@@ -247,13 +251,14 @@
     <button type="button" class="chip" data-back="30" aria-pressed="false">30 min</button>
     <button type="button" class="chip" data-back="60" aria-pressed="false">1 hour</button>
   </div>
+  <button type="button" class="btn btn-primary tray-save" id="traySave">Save</button>
   <div class="tray-foot">
-    <button type="button" class="link-btn" id="trayMore">Add a note or exact time</button>
-    <button type="button" class="link-btn" id="trayDone">Close</button>
+    <button type="button" class="link-btn" id="trayMore">Save, then add a note or exact time</button>
+    <button type="button" class="link-btn" id="trayDone">Not now</button>
   </div>
 </aside>
 
-<nav class="actions" aria-label="Log it now, one tap">
+<nav class="actions" aria-label="Log something">
   <button type="button" class="act" data-log="feed">
     <svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>
     <span class="act-label">Feed</span>
@@ -391,7 +396,7 @@
   <section class="guide-step" data-step="hello" hidden>
     <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
     <h2 class="sheet-title" tabindex="-1">Welcome to Jubilee</h2>
-    <p class="welcome-lead">One tap logs a feed or a diaper, and you both see it. Let's put it on your phone. It takes about a minute.</p>
+    <p class="welcome-lead">Two taps log a feed or a diaper, and you both see it. Let's put it on your phone. It takes about a minute.</p>
     <button type="button" class="btn btn-primary btn-big" id="guideGo">Let's go</button>
     <button type="button" class="link-btn guide-skip" data-guide="later">Not now, just let me look</button>
   </section>
@@ -454,11 +459,11 @@
 <dialog class="sheet welcome" id="welcomeSheet" aria-labelledby="welcomeTitle">
   <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
   <h2 class="sheet-title" id="welcomeTitle" tabindex="-1" autofocus>Welcome to Jubilee</h2>
-  <p class="welcome-lead">Keeping track is one tap. Here's all there is to it.</p>
+  <p class="welcome-lead">Keeping track is two taps. Here's all there is to it.</p>
   <ul class="tips">
-    <li><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg><span><strong>Tap Feed, Pee or Poop</strong> the moment it happens. It's saved with the time. Nothing else to fill in.</span></li>
-    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>After a Feed, tap Left or Right</strong> for the side it started on. Jubilee then tells you which side is next.</span></li>
-    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>Forgot one?</strong> Tap it now, then tap 15 min, 30 min or 1 hour.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg><span><strong>Tap Feed, Pee or Poop</strong> the moment it happens, <strong>then tap Save</strong>. Nothing is logged until you tap Save.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>On a Feed, tap Left or Right</strong> for the side it started on, before Save. Jubilee then tells you which side is next.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>Forgot one?</strong> Tap it now, tap 15 min, 30 min or 1 hour, then Save.</span></li>
     <li><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg><span><strong>Made a mistake?</strong> Tap Undo, or tap any entry to fix or delete it.</span></li>
   </ul>
   <div class="sheet-actions">
@@ -476,7 +481,8 @@
     <h3><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>Logging</h3>
     <ol>
       <li>Tap <strong>Feed</strong>, <strong>Pee</strong> or <strong>Poop</strong> at the bottom the moment it happens.</li>
-      <li>That's it. It's saved with the time.</li>
+      <li>Tap <strong>Save</strong>. It keeps the time of your first tap. Nothing is logged until you tap Save, so a stray tap does no harm: tap <strong>Discard</strong>.</li>
+      <li>Walked away without saving? It is not lost. It waits at the top of the front page, asking to be saved or discarded.</li>
     </ol>
     <p>After a <strong>Feed</strong>, two big buttons ask which side she <strong>started on</strong>: tap <strong>Left</strong> or <strong>Right</strong> (or <strong>Bottle</strong>). One tap, no typing. The front page then tells you which side to start on next time.</p>
     <p>After a <strong>Bottle</strong> feed or a <strong>Pump</strong>, the tray asks how much. Tap <strong>oz</strong> or <strong>mL</strong> first, whichever you measure in; this phone remembers. Then tap an amount, or nudge it to the exact number. For a bottle of donor milk, tap <strong>Donor milk</strong> too.</p>

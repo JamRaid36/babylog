@@ -1,6 +1,8 @@
 // Keeps the app opening with no signal. Network first, so a new version shows up on the next open;
+// every request asks the server whether its copy is still current ('no-cache'), because the host lets a
+// browser reuse a file for 10 minutes and a phone was seen showing the old app after a new one shipped.
 // the saved copy is only used when the network fails. Requests to GitHub's API are never touched.
-const CACHE = 'babylog-v15';
+const CACHE = 'babylog-v16';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'sync.js', 'manifest.webmanifest', 'bloom-180.png', 'bloom-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -19,7 +21,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();

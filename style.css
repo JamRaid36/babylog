@@ -280,6 +280,21 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s4) var(--s4) 0; }
 }
 .chip[aria-pressed="true"] { background: var(--rose); color: var(--on-rose); border-color: var(--rose); }
 .tray-foot { margin-top: var(--s1); }
+/* on a short phone the tray scrolls inside itself, so Save is always reachable */
+.tray { max-height: calc(100vh - 130px); max-height: calc(100dvh - 130px - env(safe-area-inset-bottom)); overflow-y: auto; }
+.tray-unsaved { margin-top: var(--s1); font-size: 14px; color: var(--muted); }
+.tray-unsaved strong { color: var(--ink); font-weight: 800; }
+.tray-save { width: 100%; min-height: 60px; margin-top: var(--s3); font-size: 19px; font-weight: 800; }
+
+/* A tap nobody answered: it waits here until it is saved or discarded */
+.waiting {
+  margin-bottom: var(--s3); padding: var(--s4); border-radius: var(--r2);
+  background: var(--paper); border: 2px dashed var(--rose); box-shadow: var(--shadow);
+}
+.waiting-text strong { display: block; font-size: 19px; font-weight: 800; line-height: 1.2; }
+.waiting-text span { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+.waiting-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); margin: var(--s3) 0 var(--s2); }
+.waiting-actions .btn { min-height: 56px; font-size: 17px; font-weight: 800; }
 .tray-label { margin-top: var(--s2); }
 /* "Started on": the one question worth asking after a feed, so it is big and comes first */
 .chips-big { grid-template-columns: repeat(3, minmax(0, 1fr)); }
