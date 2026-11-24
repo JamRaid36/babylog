@@ -195,8 +195,15 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('the invite is kept in the address, so Add to Home Screen carries it', frame.contentWindow.location.hash === `#s=${code}`);
     check('and this phone is connected already', JSON.parse(localStorage.getItem('bl.cfg')).token === 'invite-key');
     d.querySelector('#guideGo').click();
-    check("Let's go shows the four Home Screen steps", step('install') && d.querySelectorAll('.guide-list li').length === 4);
-    check('the steps name the real buttons', ['Share button', 'Add to Home Screen', 'Tap "Add"', 'Look for this picture'].every((t) => d.querySelector('.guide-list').textContent.includes(t)));
+    check('the browser this check runs in is picked by itself', step('install') && d.querySelector('[data-browser="chrome"]').getAttribute('aria-pressed') === 'true');
+    d.querySelector('[data-browser="safari"]').click();
+    check("tapping Safari shows its five Home Screen steps", d.querySelectorAll('.guide-list li').length === 5 && d.querySelector('[data-browser="safari"]').getAttribute('aria-pressed') === 'true');
+    check('the Safari steps name the real buttons', ['menu button', '"Share"', 'Add to Home Screen', 'Edit Actions', 'Open as Web App', 'Tap "Add"', 'Look for this picture'].every((t) => d.querySelector('.guide-list').textContent.includes(t)), d.querySelector('.guide-list').textContent);
+    d.querySelector('[data-browser="chrome"]').click();
+    check('tapping Chrome swaps in its four steps', d.querySelectorAll('.guide-list li').length === 4 && d.querySelector('.guide-list').textContent.includes('right end of the web address bar') && !d.querySelector('.guide-list').textContent.includes('Open as Web App'));
+    check('every step has its picture', d.querySelectorAll('.guide-list .guide-pic svg, .guide-list .guide-pic img, .guide-list .guide-pic span').length === 4);
+    d.querySelector('[data-browser="safari"]').click();
+    check('and back to Safari', d.querySelectorAll('.guide-list li').length === 5);
     check('it says the shared log comes along', d.querySelector('#guideCarry').textContent === 'Your shared log comes along with it.');
     d.querySelector('.guide-step[data-step="install"] [data-guide="later"]').click();
     check('"Not now" moves on to whose phone', step('who'));

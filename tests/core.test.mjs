@@ -212,7 +212,7 @@ test('Home Screen steps: the copied text is the shown steps, numbered, with the 
   assert.equal(steps.length, 4);
   assert.ok(steps[0].endsWith(url));
   steps.forEach((s, i) => assert.ok(text.includes(`${i + 1}. ${s}`), `step ${i + 1} is in the copied text`));
-  for (const name of ['Add to Home Screen', 'Share button', 'walks you through']) assert.ok(text.includes(name), name);
+  for (const name of ['Add to Home Screen', 'Open as Web App', 'walks you through']) assert.ok(text.includes(name), name);
   assert.ok(!/[—]/.test(text));
 });
 
@@ -340,4 +340,18 @@ test('manifest: real JSON with the name and icons, and no start_url (so the invi
   assert.equal(m.display, 'standalone');
   assert.equal(m.icons.length, 2);
   assert.equal('start_url' in m, false);
+});
+
+test('Home Screen steps per browser: the buttons Apple and Google name', () => {
+  const safari = C.homeScreenSteps('safari').map((s) => `${s.title} ${s.text}`).join(' ');
+  const chrome = C.homeScreenSteps('chrome').map((s) => `${s.title} ${s.text}`).join(' ');
+  for (const name of ['menu button', '"Share"', 'Add to Home Screen', 'Edit Actions', 'Open as Web App', '"Add"']) assert.ok(safari.includes(name), name);
+  for (const name of ['Share button', 'right end of the web address bar', 'Add to Home Screen', '"Add"']) assert.ok(chrome.includes(name), name);
+  assert.ok(!chrome.includes('Open as Web App'));
+  assert.equal(C.homeScreenSteps('safari').length, 5);
+  assert.equal(C.homeScreenSteps('chrome').length, 4);
+  assert.deepEqual(C.homeScreenSteps('anything else'), C.homeScreenSteps('safari'));
+  assert.equal(C.browserOf('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0 Mobile/15E148 Safari/604.1'), 'chrome');
+  assert.equal(C.browserOf('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1'), 'safari');
+  assert.equal(C.browserOf(undefined), 'safari');
 });

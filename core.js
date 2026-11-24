@@ -275,13 +275,41 @@ export function decodeSetup(str) {
   }
 }
 
+// Putting it on the Home Screen, per browser. Wording follows the makers' own pages, read 2026-11-24:
+//   Safari, iOS 27: support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios
+//   Chrome on iPhone: support.google.com/chrome/answer/9658361 (iPhone & iPad)
+// pic names a drawing in app.js (PICS).
+export const BROWSERS = { safari: 'Safari', chrome: 'Chrome' };
+export function homeScreenSteps(browser) {
+  const open = { pic: 'app', title: 'Open Jubilee from your Home Screen.', text: 'Look for this picture.' };
+  if (browser === 'chrome') {
+    return [
+      { pic: 'share', title: 'Tap the Share button.', text: 'It is at the right end of the web address bar: a square with an arrow pointing up.' },
+      { pic: 'plus', title: 'Tap "Add to Home Screen".', text: 'You may need to scroll down the list to find it.' },
+      { pic: 'add', title: 'Tap "Add".', text: 'You can leave the name as it is.' },
+      open,
+    ];
+  }
+  return [
+    { pic: 'menu', title: 'Tap the menu button, then "Share".', text: 'The menu button is beside the web address and looks like three short lines (three dots on an older iPhone). If you already see a square with an arrow pointing up, tap that instead.' },
+    { pic: 'plus', title: 'Tap "Add to Home Screen".', text: 'Scroll down the list to find it. Not there? Scroll to the very bottom, tap "Edit Actions", then tap the green plus beside "Add to Home Screen".' },
+    { pic: 'toggle', title: 'Leave "Open as Web App" switched on.', text: 'It should be green. Tap it if it is not.' },
+    { pic: 'add', title: 'Tap "Add".', text: 'You can leave the name as it is.' },
+    open,
+  ];
+}
+// Which browser this is, from what it says about itself; Safari when it does not say.
+export function browserOf(userAgent) {
+  return /CriOS|Chrome\//.test(String(userAgent || '')) ? 'chrome' : 'safari';
+}
+
 // The "put this app on a Home Screen" steps, shown on the front page and copied as a text message.
 // One list feeds both, so what is read and what is sent can never differ.
 export function installSteps(url) {
   return [
     `Open this link in Safari: ${url}`,
-    'Tap the Share button (the square with the arrow pointing up). If you don\'t see it, tap the three dots first.',
-    'Scroll down, tap "Add to Home Screen", then tap "Add".',
+    'Tap the menu button beside the web address (three short lines, or three dots), then tap "Share". If you already see a square with an arrow pointing up, tap that instead.',
+    'Scroll down, tap "Add to Home Screen", leave "Open as Web App" on, then tap "Add".',
     'Open "Jubilee" from your Home Screen, not from Safari. It walks you through the rest.',
   ];
 }

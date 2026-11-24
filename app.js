@@ -579,7 +579,33 @@ $('#nudgeShow').addEventListener('click', () => (IS_IPHONE ? showGuide('install'
 // ── The first-run guide: one screen at a time, nothing to read up on beforehand ───────────────
 const guide = $('#guide');
 
+// The little pictures beside each Home Screen step.
+const LINE = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const PICS = {
+  menu: `<svg ${LINE}><path d="M5 7.500h14M5 12h14M5 16.500h8.500"/></svg>`,
+  share: `<svg ${LINE}><path d="M12 15V3.500M8 7l4-4 4 4M7.500 10.500H6a1.500 1.500 0 0 0-1.500 1.500v7.500A1.500 1.500 0 0 0 6 21h12a1.500 1.500 0 0 0 1.500-1.500V12a1.500 1.500 0 0 0-1.500-1.500h-1.500"/></svg>`,
+  plus: `<svg ${LINE}><rect x="3.500" y="3.500" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg>`,
+  toggle: `<svg ${LINE}><rect x="2.500" y="7" width="19" height="10" rx="5"/><circle cx="16.500" cy="12" r="2.500" fill="currentColor"/></svg>`,
+  add: '<span>Add</span>',
+  app: '<img src="bloom-180.png" alt="" width="56" height="56">',
+};
+let guideBrowser = C.browserOf(navigator.userAgent);
+function renderGuideSteps() {
+  for (const b of guide.querySelectorAll('[data-browser]')) b.setAttribute('aria-pressed', String(b.dataset.browser === guideBrowser));
+  $('#guideList').replaceChildren(...C.homeScreenSteps(guideBrowser).map((s) => {
+    const li = el('li');
+    const pic = el('span', `guide-pic${s.pic === 'add' ? ' guide-pic-word' : ''}${s.pic === 'app' ? ' guide-pic-icon' : ''}`);
+    pic.setAttribute('aria-hidden', 'true');
+    pic.innerHTML = PICS[s.pic]; // fixed drawings from the table above, never anything typed or synced
+    const words = el('span');
+    words.append(el('strong', '', s.title), ` ${s.text}`);
+    li.append(pic, words);
+    return li;
+  }));
+}
+
 function showGuide(step) {
+  renderGuideSteps();
   for (const s of guide.querySelectorAll('.guide-step')) s.hidden = s.dataset.step !== step;
   $('#guideCarry').textContent = cfg.token ? 'Your shared log comes along with it.' : 'It walks you through the rest.';
   if (!guide.open) {
@@ -630,6 +656,8 @@ $('#guideGo').addEventListener('click', () => {
 });
 
 guide.addEventListener('click', (ev) => {
+  const browser = ev.target.closest('[data-browser]');
+  if (browser) { guideBrowser = browser.dataset.browser; renderGuideSteps(); return; }
   const skip = ev.target.closest('[data-guide]');
   if (skip) {
     store.set(skip.dataset.guide === 'later' ? 'bl.later' : 'bl.skipConnect', true);

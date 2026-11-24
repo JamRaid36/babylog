@@ -329,9 +329,9 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s4) var(--s4) 0; }
 .guide-pic-word { font-size: 16px; font-weight: 800; }
 .guide-pic-icon { background: none; }
 .guide-pic-icon img { width: 56px; height: 56px; border-radius: 13px; display: block; }
-.guide-point { margin-top: var(--s4); font-size: 16px; font-weight: 800; color: var(--rose); }
-.guide-arrow { display: inline-block; font-size: 22px; animation: nod 1.4s ease-in-out infinite; }
-@keyframes nod { 50% { transform: translateY(6px); } }
+.guide-browser { display: grid; margin-top: var(--s3); }
+.guide-browser .chip { min-height: 52px; font-size: 16px; font-weight: 800; }
+.guide-pic-word span { font-size: 16px; font-weight: 800; }
 .guide-who { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); margin-top: var(--s5); }
 .guide-who .btn.btn-big { min-height: 96px; font-size: 24px; border-radius: var(--r3); margin-top: 0; }
 .guide-help { margin-top: var(--s4); padding: var(--s4); background: var(--paper); border-radius: var(--r2); text-align: left; }

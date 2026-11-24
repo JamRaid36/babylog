@@ -357,25 +357,13 @@
   <section class="guide-step" data-step="install" hidden>
     <p class="guide-count">Step 1 of 2</p>
     <h2 class="sheet-title" tabindex="-1">Put Jubilee on your Home Screen</h2>
-    <ol class="guide-list">
-      <li>
-        <span class="guide-pic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3.500M8 7l4-4 4 4M7.500 10.500H6a1.500 1.500 0 0 0-1.500 1.500v7.500A1.500 1.500 0 0 0 6 21h12a1.500 1.500 0 0 0 1.500-1.500V12a1.500 1.500 0 0 0-1.500-1.500h-1.500"/></svg></span>
-        <span><strong>Tap the Share button.</strong> It's the square with an arrow pointing up, at the bottom of your screen. Can't see it? Tap the three dots first.</span>
-      </li>
-      <li>
-        <span class="guide-pic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.500" y="3.500" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>
-        <span><strong>Tap "Add to Home Screen".</strong> You may need to scroll down the list to find it.</span>
-      </li>
-      <li>
-        <span class="guide-pic guide-pic-word" aria-hidden="true">Add</span>
-        <span><strong>Tap "Add"</strong> in the top corner.</span>
-      </li>
-      <li>
-        <span class="guide-pic guide-pic-icon" aria-hidden="true"><img src="bloom-180.png" alt="" width="48" height="48"></span>
-        <span><strong>Open Jubilee from your Home Screen.</strong> Look for this picture. <span id="guideCarry">It walks you through the rest.</span></span>
-      </li>
-    </ol>
-    <p class="guide-point">The Share button is down at the bottom <span class="guide-arrow" aria-hidden="true">&darr;</span></p>
+    <div class="seg seg-2 guide-browser" role="group" aria-label="Which browser are you in">
+      <button type="button" class="chip" data-browser="safari" aria-pressed="true">Safari</button>
+      <button type="button" class="chip" data-browser="chrome" aria-pressed="false">Chrome</button>
+    </div>
+    <p class="guide-note" id="guideBrowserNote">Pick the one you are in right now. The steps change to match.</p>
+    <ol class="guide-list" id="guideList"></ol>
+    <p class="guide-note" id="guideCarry">It walks you through the rest.</p>
     <button type="button" class="link-btn guide-skip" data-guide="later">Not now, just let me look</button>
   </section>
 
