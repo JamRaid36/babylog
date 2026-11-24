@@ -134,6 +134,24 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s5) var(--s4) 0; }
 }
 .notice button { margin-left: var(--s1); }
 
+/* ── Home Screen steps (folds open) ── */
+.install { margin-top: var(--s4); background: var(--paper); border: 1px solid var(--cream); }
+.install summary {
+  list-style: none; cursor: pointer; touch-action: manipulation;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+  min-height: 48px; padding: var(--s2) var(--s4); font-size: 15px;
+  transition: background var(--fast) ease-out;
+}
+.install summary::-webkit-details-marker { display: none; }
+.install summary:active { background: var(--rule); }
+.install summary svg { flex: 0 0 auto; color: var(--muted); transition: transform var(--fast) ease-out; }
+.install[open] summary svg { transform: rotate(180deg); }
+.install-body { padding: var(--s3) var(--s4) var(--s4); border-top: 1px solid var(--rule); }
+.install-note { font-size: 13px; color: var(--muted); }
+.install-steps { margin: var(--s3) 0 var(--s2); padding-left: 1.4em; font-size: 15px; overflow-wrap: anywhere; }
+.install-steps li + li { margin-top: var(--s2); }
+.install-steps li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* ── History ── */
 .history { margin-top: var(--s6); }
 .day { margin-top: var(--s4); content-visibility: auto; contain-intrinsic-size: auto 320px; }
@@ -272,7 +290,7 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s5) var(--s4) 0; }
 .toast .link-btn { color: #F4EFE8; white-space: nowrap; }
 
 @media (hover: hover) {
-  .row:hover { background: var(--rule); }
+  .row:hover, .install summary:hover { background: var(--rule); }
   .act:hover { background: var(--act-press); }
   .chip:hover:not([aria-pressed="true"]), .btn:hover:not(.btn-primary):not(.is-armed), .seg input:not(:checked):hover + span { background: var(--rule); }
   .btn-primary:hover { background: var(--muted); }

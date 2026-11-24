@@ -202,3 +202,14 @@ test('sync: an entry edited while a save is in flight stays queued', async () =>
   assert.deepEqual(dad.dirty, {});
   assert.equal(gh.read('2026-11-24')[0].side, 'L');
 });
+
+test('Home Screen steps: the copied text is the shown steps, numbered, with the link and the real button names', () => {
+  const url = 'https://example.test/babylog/';
+  const steps = C.installSteps(url);
+  const text = C.installText(url);
+  assert.equal(steps.length, 5);
+  assert.ok(steps[0].endsWith(url));
+  steps.forEach((s, i) => assert.ok(text.includes(`${i + 1}. ${s}`), `step ${i + 1} is in the copied text`));
+  for (const name of ['Add to Home Screen', 'Sync key or setup link', 'Save settings']) assert.ok(text.includes(name), name);
+  assert.ok(!/[—]/.test(text));
+});

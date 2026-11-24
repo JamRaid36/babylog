@@ -54,6 +54,19 @@
 
   <p class="notice" id="notice" hidden></p>
 
+  <!-- Folded shut by default. The steps are filled in by app.js from core.js, the same text the button copies. -->
+  <details class="install" id="install">
+    <summary>
+      <span>Put this app on a Home Screen</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </summary>
+    <div class="install-body">
+      <p class="install-note">For iPhone. Copy the steps and text them to whoever needs the app.</p>
+      <ol class="install-steps" id="installSteps"></ol>
+      <button type="button" class="btn" id="installCopy">Copy these steps</button>
+    </div>
+  </details>
+
   <section class="history" aria-labelledby="historyHead">
     <h2 class="eyebrow" id="historyHead">History</h2>
     <div id="log"></div>

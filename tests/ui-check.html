@@ -75,6 +75,19 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     q('#toastAction').click();
     check('Undo brings it back', rows() === before + 1);
 
+    // ── Home Screen steps ──
+    check('Home Screen steps start folded shut', q('#install') && !q('#install').open);
+    q('#install summary').click();
+    check('a tap opens them', q('#install').open);
+    const steps = [...d.querySelectorAll('#installSteps li')].map((li) => li.textContent);
+    const appUrl = frame.contentWindow.location.origin + frame.contentWindow.location.pathname.replace(/index\.html$/, '');
+    check('five steps, the first with this app\'s own link', steps.length === 5 && steps[0].endsWith(appUrl), steps[0]);
+    q('#installCopy').click();
+    await wait(1800);
+    check('Copy answers either way', /^(Steps copied|Could not copy)/.test(q('#toastText').textContent), q('#toastText').textContent);
+    q('#install summary').click();
+    check('a second tap folds them shut', !q('#install').open);
+
     q('#gearBtn').click();
     check('settings open', q('#settingsSheet').open);
     q('#setRepo').value = 'not a repo';

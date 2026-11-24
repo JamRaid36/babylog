@@ -401,6 +401,35 @@ for (const sheet of [editSheet, settingsSheet]) {
   sheet.addEventListener('click', (ev) => { if (ev.target === sheet && sheet === settingsSheet && !cfg.token && !$('#setToken').value) sheet.close(); });
 }
 
+// ── Home Screen steps: read them here, or copy them into a text ────────────────────────────────
+const APP_URL = `${location.origin}${location.pathname.replace(/index\.html$/, '')}`;
+$('#installSteps').replaceChildren(...C.installSteps(APP_URL).map((s) => el('li', '', s)));
+
+async function copyText(text) {
+  // First the old way, through a throwaway text box: it answers at once, inside the tap, on every phone.
+  const box = document.createElement('textarea');
+  box.value = text;
+  box.setAttribute('readonly', '');
+  box.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+  document.body.append(box);
+  box.select();
+  box.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  box.remove();
+  if (ok) return true;
+  // Then the newer way, but never wait on it forever: a browser can leave the request hanging.
+  if (!navigator.clipboard) return false;
+  const gaveUp = new Promise((resolve) => { setTimeout(() => resolve(false), 1500); });
+  return Promise.race([navigator.clipboard.writeText(text).then(() => true, () => false), gaveUp]);
+}
+
+$('#installCopy').addEventListener('click', async () => {
+  const ok = await copyText(C.installText(APP_URL));
+  toast(ok ? 'Steps copied. Paste them into a text.' : 'Could not copy. Press and hold the steps to copy them.');
+  $('#installCopy').focus();
+});
+
 // ── Sync ────────────────────────────────────────────────────────────────────────────────────────
 let syncTimer = null;
 let syncing = false;

@@ -201,6 +201,23 @@ export function decodeSetup(str) {
   }
 }
 
+// The "put this app on a Home Screen" steps, shown on the front page and copied as a text message.
+// One list feeds both, so what is read and what is sent can never differ.
+export function installSteps(url) {
+  return [
+    `Open this link in Safari: ${url}`,
+    'Tap the Share button (the square with the arrow pointing up). If you don\'t see it, tap the three dots first.',
+    'Scroll down, tap "Add to Home Screen", then tap "Add".',
+    'Open "Baby log" from your Home Screen, not from Safari.',
+    'To share one log between phones: tap the gear, paste the setup link you were sent into "Sync key or setup link", then tap "Save settings".',
+  ];
+}
+
+export function installText(url) {
+  const steps = installSteps(url).map((s, i) => `${i + 1}. ${s}`);
+  return ['Baby log: one tap to log a feed, pee or poop. To put it on your iPhone:', '', ...steps].join('\n');
+}
+
 // Keep only fields we know, with sane types, before an entry is saved or accepted from sync.
 export function clean(e) {
   if (!e || typeof e.id !== 'string' || !/^\d{4}-\d{2}-\d{2}-[a-z0-9]+$/.test(e.id)) return null;
