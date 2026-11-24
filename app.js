@@ -81,6 +81,16 @@ function renderSince() {
     $(subSel).textContent = e ? `${C.clock(e.t)}${extra}` : 'None yet';
   }
   $('#tally').textContent = C.tally(s.day);
+  const side = C.nextSide(Object.values(state.events), now);
+  const line = $('#nextSide');
+  line.hidden = !side;
+  if (side) {
+    line.replaceChildren(
+      art('flower'),
+      el('span', '', `Last feed started on the ${C.SIDE_LABEL[side.last].toLowerCase()}. `),
+      el('strong', '', `Next: start on the ${C.SIDE_LABEL[side.next].toLowerCase()}.`),
+    );
+  }
 }
 
 function el(tag, cls, text) {
@@ -209,7 +219,7 @@ function openTray(id) {
   $('#traySide').hidden = e.k !== 'feed';
   paintTray();
   $('#tray').hidden = false;
-  armTray(9000);
+  armTray(e.k === 'feed' ? 30000 : 9000); // a feed waits longer: the side is worth the one tap
 }
 function armTray(ms) { clearTimeout(trayTimer); trayTimer = setTimeout(closeTray, ms); }
 function closeTray() { clearTimeout(trayTimer); trayId = null; $('#tray').hidden = true; }

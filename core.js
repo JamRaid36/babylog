@@ -14,6 +14,20 @@
 export const KINDS = ['feed', 'pee', 'poop'];
 export const KIND_LABEL = { feed: 'Feed', pee: 'Pee', poop: 'Poop' };
 export const SIDE_LABEL = { L: 'Left', R: 'Right', B: 'Both sides', bottle: 'Bottle' };
+// `side` on a feed is the side it STARTED on. How it reads under an entry:
+export const SIDE_DETAIL = { L: 'Started left', R: 'Started right', B: 'Both sides', bottle: 'Bottle' };
+
+// Which side to start the next feed on: the opposite of where the latest breast feed started.
+// Bottle feeds are skipped. If the latest breast feed has no side marked, there is no honest answer: null.
+export function nextSide(events, now = Date.now()) {
+  for (const e of live(events)) {
+    if (e.k !== 'feed' || e.t > now + MIN || e.side === 'bottle') continue;
+    if (e.side === 'L') return { last: 'L', next: 'R' };
+    if (e.side === 'R') return { last: 'R', next: 'L' };
+    return null;
+  }
+  return null;
+}
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -116,7 +130,7 @@ export function fromLocalInput(value) {
 export function detail(e) {
   const parts = [];
   if (e.k === 'feed') {
-    if (e.side && SIDE_LABEL[e.side]) parts.push(SIDE_LABEL[e.side]);
+    if (e.side && SIDE_DETAIL[e.side]) parts.push(SIDE_DETAIL[e.side]);
     if (e.min > 0) parts.push(`${e.min} min`);
     if (e.oz > 0) parts.push(`${e.oz} oz`);
   }

@@ -118,6 +118,8 @@
     </div>
   </section>
 
+  <p class="next-side" id="nextSide" hidden></p>
+
   <p class="tally"><span class="eyebrow">Last 24 hours</span> <span id="tally">0 feeds &middot; 0 pees &middot; 0 poops</span></p>
 
   <p class="notice" id="notice" hidden></p>
@@ -147,18 +149,20 @@
     <p class="tray-title" id="trayTitle"></p>
     <button type="button" class="link-btn" id="trayUndo">Undo</button>
   </div>
+  <div id="traySide" hidden>
+    <p class="eyebrow tray-label" id="traySideLabel">Started on</p>
+    <div class="chips chips-big" role="group" aria-labelledby="traySideLabel">
+      <button type="button" class="chip" data-side="L" aria-pressed="false">Left</button>
+      <button type="button" class="chip" data-side="R" aria-pressed="false">Right</button>
+      <button type="button" class="chip" data-side="bottle" aria-pressed="false">Bottle</button>
+    </div>
+  </div>
   <p class="eyebrow tray-label">Happened earlier? Tap how long ago</p>
   <div class="chips" id="trayWhen" role="group" aria-label="How long ago did it happen">
     <button type="button" class="chip" data-back="0" aria-pressed="true">Just now</button>
     <button type="button" class="chip" data-back="15" aria-pressed="false">15 min</button>
     <button type="button" class="chip" data-back="30" aria-pressed="false">30 min</button>
     <button type="button" class="chip" data-back="60" aria-pressed="false">1 hour</button>
-  </div>
-  <div class="chips" id="traySide" role="group" aria-label="Which side or bottle" hidden>
-    <button type="button" class="chip" data-side="L" aria-pressed="false">Left</button>
-    <button type="button" class="chip" data-side="R" aria-pressed="false">Right</button>
-    <button type="button" class="chip" data-side="B" aria-pressed="false">Both</button>
-    <button type="button" class="chip" data-side="bottle" aria-pressed="false">Bottle</button>
   </div>
   <div class="tray-foot">
     <button type="button" class="link-btn" id="trayMore">Add a note or exact time</button>
@@ -200,7 +204,7 @@
 
     <div id="feedFields">
       <fieldset class="seg seg-4">
-        <legend class="eyebrow">Side or bottle (optional)</legend>
+        <legend class="eyebrow">Started on (optional)</legend>
         <label><input type="checkbox" name="side" value="L"><span>Left</span></label>
         <label><input type="checkbox" name="side" value="R"><span>Right</span></label>
         <label><input type="checkbox" name="side" value="B"><span>Both</span></label>
@@ -296,7 +300,8 @@
       <li>Tap <strong>Feed</strong>, <strong>Pee</strong> or <strong>Poop</strong> at the bottom the moment it happens.</li>
       <li>That's it. It's saved with the time.</li>
     </ol>
-    <p>A little tray pops up for a few seconds. Use it only if you want to: <strong>Undo</strong>, say it happened earlier, or for a feed pick <strong>Left</strong>, <strong>Right</strong>, <strong>Both</strong> or <strong>Bottle</strong>. Ignore it and it goes away.</p>
+    <p>After a <strong>Feed</strong>, two big buttons ask which side she <strong>started on</strong>: tap <strong>Left</strong> or <strong>Right</strong> (or <strong>Bottle</strong>). One tap, no typing. The front page then tells you which side to start on next time.</p>
+    <p>The little tray that pops up also lets you <strong>Undo</strong> or say it happened earlier. Ignore it and it goes away.</p>
   </section>
 
   <section class="help-card">

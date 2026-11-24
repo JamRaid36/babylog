@@ -44,8 +44,13 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     q('.act[data-log="feed"]').click();
     check('side choices show for a feed', !q('#traySide').hidden);
     q('#traySide .chip[data-side="L"]').click();
-    check('one tap sets the side', d.querySelector('.row .row-detail')?.textContent === 'Left');
+    check('one tap sets the side', d.querySelector('.row .row-detail')?.textContent === 'Started left');
     check('"last feed" shows the side', q('#sinceFeedSub').textContent.endsWith('Left'));
+    check('front page says which side is next', !q('#nextSide').hidden && q('#nextSide').textContent.includes('Next: start on the right.'), q('#nextSide').textContent);
+    check('the side buttons are Left, Right, Bottle', [...d.querySelectorAll('#traySide .chip')].map((c) => c.textContent).join() === 'Left,Right,Bottle');
+    q('#traySide .chip[data-side="R"]').click();
+    check('tapping the other side switches it', q('#nextSide').textContent.includes('Next: start on the left.'));
+    q('#traySide .chip[data-side="L"]').click();
     q('#trayDone').click();
     check('Done closes the tray', q('#tray').hidden);
 
@@ -56,7 +61,7 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     q('#editMin').value = '12';
     q('#editForm').requestSubmit();
     const det = d.querySelector('.row .row-detail');
-    check('note and minutes are saved', det.textContent === 'Left · 12 min · sleepy <b>feed</b>', det.textContent);
+    check('note and minutes are saved', det.textContent === 'Started left · 12 min · sleepy <b>feed</b>', det.textContent);
     check('a note cannot inject markup', det.querySelector('b') === null);
     check('editor closes after saving', !q('#editSheet').open);
 

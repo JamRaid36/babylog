@@ -72,7 +72,7 @@ test('groupByDay: newest first with per-day counts', () => {
 });
 
 test('detail and csv', () => {
-  assert.equal(C.detail(ev('2026-11-24-a', 'feed', T0, T0, { side: 'L', min: 15 })), 'Left · 15 min');
+  assert.equal(C.detail(ev('2026-11-24-a', 'feed', T0, T0, { side: 'L', min: 15 })), 'Started left · 15 min');
   assert.equal(C.detail(ev('2026-11-24-a', 'feed', T0, T0, { side: 'bottle', oz: 2.5, note: 'sleepy' })), 'Bottle · 2.5 oz · sleepy');
   assert.equal(C.detail(ev('2026-11-24-a', 'pee', T0)), '');
   const csv = C.toCsv([ev('2026-11-24-a', 'feed', T0, T0, { side: 'R', note: 'said "hi", twice', by: 'Dad' }), ev('2026-11-24-b', 'pee', T0, T0, { x: true })]);
@@ -230,4 +230,19 @@ test('sync: a key that cannot see the repo is reported, never shown as shared', 
   assert.equal(await syncOnce(store, empty), false, 'an empty log on a visible repo is fine');
   await syncOnce(store, dad);
   assert.deepEqual(dad.dirty, {});
+});
+
+test('next side: the opposite of where the latest breast feed started', () => {
+  const now = T0 + 10 * 3600e3;
+  const f = (n, hoursAgo, extra) => ev(`2026-11-24-n${n}`, 'feed', now - hoursAgo * 3600e3, T0, extra);
+  assert.equal(C.nextSide([], now), null);
+  assert.deepEqual(C.nextSide([f(1, 3, { side: 'L' })], now), { last: 'L', next: 'R' });
+  assert.deepEqual(C.nextSide([f(1, 3, { side: 'L' }), f(2, 1, { side: 'R' })], now), { last: 'R', next: 'L' });
+  // a bottle in between does not change which breast is next
+  assert.deepEqual(C.nextSide([f(1, 3, { side: 'L' }), f(2, 1, { side: 'bottle' })], now), { last: 'L', next: 'R' });
+  // latest breast feed has no side marked: say nothing rather than guess from an older one
+  assert.equal(C.nextSide([f(1, 3, { side: 'L' }), f(2, 1, {})], now), null);
+  assert.equal(C.nextSide([f(1, 3, { side: 'L' }), f(2, 1, { side: 'B' })], now), null);
+  // a deleted feed and a pee are ignored
+  assert.deepEqual(C.nextSide([f(1, 3, { side: 'L' }), { ...f(2, 1, { side: 'R' }), x: true }, ev('2026-11-24-n3', 'pee', now - 60e3, T0)], now), { last: 'L', next: 'R' });
 });
