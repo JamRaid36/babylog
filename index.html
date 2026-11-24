@@ -113,7 +113,7 @@
 
     <label class="field">
       <span class="eyebrow">When</span>
-      <input type="datetime-local" id="editWhen" required>
+      <input type="datetime-local" id="editWhen" name="when" required>
       <span class="field-error" id="editWhenError" hidden>Pick a date and time for this entry.</span>
     </label>
 
@@ -128,18 +128,18 @@
       <div class="field-row">
         <label class="field">
           <span class="eyebrow">Minutes (optional)</span>
-          <input type="number" id="editMin" inputmode="numeric" min="0" max="600" step="1">
+          <input type="number" id="editMin" name="minutes" autocomplete="off" inputmode="numeric" min="0" max="600" step="1">
         </label>
         <label class="field">
           <span class="eyebrow">Ounces (optional)</span>
-          <input type="number" id="editOz" inputmode="decimal" min="0" max="99" step="0.25">
+          <input type="number" id="editOz" name="ounces" autocomplete="off" inputmode="decimal" min="0" max="99" step="0.25">
         </label>
       </div>
     </div>
 
     <label class="field">
       <span class="eyebrow">Note (optional)</span>
-      <input type="text" id="editNote" maxlength="280" autocomplete="off">
+      <input type="text" id="editNote" name="note" maxlength="280" autocomplete="off">
     </label>
 
     <div class="sheet-actions">
@@ -156,25 +156,25 @@
 
     <label class="field">
       <span class="eyebrow">Baby's name</span>
-      <input type="text" id="setBaby" maxlength="40" autocomplete="off">
+      <input type="text" id="setBaby" name="baby" maxlength="40" autocomplete="off">
     </label>
     <label class="field">
       <span class="eyebrow">Your name on this phone</span>
-      <input type="text" id="setMe" maxlength="40" autocomplete="off" placeholder="Dad, Mom, Grandma">
+      <input type="text" id="setMe" name="logger" maxlength="40" autocomplete="off" placeholder="Dad, Mom, Grandma…">
       <span class="field-help">Shown next to what you log, so you can tell who logged what.</span>
     </label>
 
     <h3 class="eyebrow sheet-sub">Sharing between phones</h3>
     <p class="sheet-status" id="setStatus"></p>
     <label class="field">
-      <span class="eyebrow">Sync key</span>
-      <input type="password" id="setToken" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <span class="field-help">A GitHub key that can read and write the private log only. Paste it once here, then send the other phone a link.</span>
+      <span class="eyebrow">Sync key or setup link</span>
+      <input type="text" id="setToken" name="synckey" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <span class="field-help">First phone: paste the GitHub key that can read and write the private log. Second phone: paste the setup link the first phone sent.</span>
       <span class="field-error" id="setTokenError" hidden></span>
     </label>
     <label class="field">
       <span class="eyebrow">Private log location</span>
-      <input type="text" id="setRepo" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <input type="text" id="setRepo" name="logrepo" autocomplete="off" autocapitalize="off" spellcheck="false">
     </label>
 
     <div class="sheet-actions">

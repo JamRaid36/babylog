@@ -80,6 +80,10 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     q('#setRepo').value = 'not a repo';
     q('#settingsForm').requestSubmit();
     check('a bad log location is refused with a reason', q('#settingsSheet').open && !q('#setTokenError').hidden);
+    q('#setRepo').value = 'JamRaid36/babylog-data';
+    q('#setToken').value = 'https://example.test/app/#s=!!!';
+    q('#settingsForm').requestSubmit();
+    check('an unreadable setup link is refused with a reason', q('#settingsSheet').open && q('#setTokenError').textContent.includes('fresh one'));
     q('#setCancel').click();
 
     // ── real mode: does a tap survive closing the app? ──
@@ -101,6 +105,11 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('a setup link turns sharing on', cfg.token === 'test-key' && cfg.repo === 'someone/somewhere');
     check('the baby name comes with it', d.querySelector('#babyName').textContent === 'Test Baby');
     check('the key is removed from the address bar', !frame.contentWindow.location.hash);
+    frame.contentDocument.querySelector('#gearBtn').click();
+    d.querySelector('#setToken').value = `https://x.test/babylog/#s=${core.encodeSetup({ t: 'pasted-key', r: 'other/place', b: '' })}`;
+    d.querySelector('#settingsForm').requestSubmit();
+    const cfg2 = JSON.parse(localStorage.getItem('bl.cfg') || '{}');
+    check('a setup link pasted into Settings works too', cfg2.token === 'pasted-key' && cfg2.repo === 'other/place', JSON.stringify(cfg2));
     check('the two entries are queued to share', Object.keys(JSON.parse(localStorage.getItem('bl.dirty') || '{}')).length >= 1);
   } catch (err) {
     check('the check itself ran', false, String(err && err.stack || err));

@@ -223,6 +223,9 @@ $('#trayUndo').addEventListener('click', () => {
 });
 $('#trayMore').addEventListener('click', () => { const id = trayId; closeTray(); openEdit(id); });
 $('#trayDone').addEventListener('click', closeTray);
+// someone moving through the tray by keyboard or switch control is not timed out of it
+$('#tray').addEventListener('focusin', () => clearTimeout(trayTimer));
+$('#tray').addEventListener('focusout', () => armTray(9000));
 
 // ── Edit sheet ──────────────────────────────────────────────────────────────────────────────────
 let editId = null;
@@ -332,7 +335,7 @@ function openSettings() {
 
 $('#settingsForm').addEventListener('submit', (ev) => {
   ev.preventDefault();
-  const repo = $('#setRepo').value.trim() || DEFAULT_REPO;
+  let repo = $('#setRepo').value.trim() || DEFAULT_REPO;
   const err = $('#setTokenError');
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
     err.textContent = 'The log location should look like owner/name, for example JamRaid36/babylog-data.';
@@ -340,9 +343,22 @@ $('#settingsForm').addEventListener('submit', (ev) => {
     $('#setRepo').focus();
     return;
   }
-  const token = $('#setToken').value.trim();
+  let token = $('#setToken').value.trim();
+  let linkBaby = '';
+  let linkRepo = '';
+  if (token.includes('#s=') || /^https?:/i.test(token)) { // a setup link pasted where the key goes
+    const setup = C.decodeSetup((token.split('#s=')[1] || '').trim());
+    if (!setup) {
+      err.textContent = 'That setup link is not readable. Ask the other phone to send a fresh one.';
+      err.hidden = false;
+      $('#setToken').focus();
+      return;
+    }
+    token = setup.t; linkRepo = setup.r; linkBaby = setup.b;
+  }
+  if (linkRepo) repo = linkRepo;
   const sharingChanged = token !== cfg.token || repo !== cfg.repo;
-  cfg = { ...cfg, baby: $('#setBaby').value.trim(), me: $('#setMe').value.trim(), token, repo };
+  cfg = { ...cfg, baby: $('#setBaby').value.trim() || linkBaby, me: $('#setMe').value.trim(), token, repo };
   store.set('bl.cfg', cfg);
   if (sharingChanged) {
     // a different log: forget the file versions and offer everything on this phone to it
