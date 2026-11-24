@@ -332,3 +332,12 @@ test('invite card: goes away once someone else has logged', () => {
   assert.equal(C.othersHaveLogged([mine, ev('2026-11-24-i3', 'feed', T0, T0, { by: 'Mom' })], 'Dad'), true);
   assert.equal(C.othersHaveLogged([{ ...ev('2026-11-24-i4', 'feed', T0, T0, { by: 'Mom' }), x: true }], 'Dad'), false);
 });
+
+test('manifest: real JSON with the name and icons, and no start_url (so the invite can ride along)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const m = JSON.parse(await readFile(new URL('../manifest.webmanifest', import.meta.url), 'utf8'));
+  assert.equal(m.name, 'Jubilee');
+  assert.equal(m.display, 'standalone');
+  assert.equal(m.icons.length, 2);
+  assert.equal('start_url' in m, false);
+});
