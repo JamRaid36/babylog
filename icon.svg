@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Home Screen icon. Full-bleed square (iOS rounds the corners itself); the face sits inside the
+       middle 80% so Android's round mask never clips it. Colors are the app's own palette. -->
+  <rect width="512" height="512" fill="#1A1A1A"/>
+  <!-- curl of hair -->
+  <path d="M250 152c-10-40 20-66 48-54 24 10 20 44-6 44-14 0-20-12-14-22" fill="none" stroke="#C9B99A" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- ears -->
+  <circle cx="126" cy="286" r="30" fill="#C9B99A"/>
+  <circle cx="386" cy="286" r="30" fill="#C9B99A"/>
+  <circle cx="126" cy="286" r="13" fill="#B09D7C"/>
+  <circle cx="386" cy="286" r="13" fill="#B09D7C"/>
+  <!-- head -->
+  <circle cx="256" cy="278" r="134" fill="#E8E0D5"/>
+  <path d="M122 278a134 134 0 0 0 268 0c0 60-60 112-134 112s-134-52-134-112z" fill="#C9B99A" opacity=".35"/>
+  <!-- cheeks -->
+  <circle cx="178" cy="318" r="23" fill="#D9A58C" opacity=".75"/>
+  <circle cx="334" cy="318" r="23" fill="#D9A58C" opacity=".75"/>
+  <!-- sleeping eyes -->
+  <path d="M188 268q24 22 48 0" fill="none" stroke="#1A1A1A" stroke-width="12" stroke-linecap="round"/>
+  <path d="M276 268q24 22 48 0" fill="none" stroke="#1A1A1A" stroke-width="12" stroke-linecap="round"/>
+  <!-- small smile -->
+  <path d="M236 326q20 18 40 0" fill="none" stroke="#1A1A1A" stroke-width="11" stroke-linecap="round"/>
+</svg>
