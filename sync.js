@@ -7,6 +7,8 @@ import { b64decode, b64encode, bucketOf, clean, mergeEvents, sameEvents } from '
 
 const API = 'https://api.github.com';
 
+const CANNOT_SEE = 'The sync key cannot see the private log. On GitHub, check the key was given access to the log\'s repository, with Contents set to Read and write.';
+
 export class SyncError extends Error {
   constructor(kind, message) {
     super(message);
@@ -24,7 +26,7 @@ export class GitHubStore {
   async call(method, path, body) {
     let res;
     try {
-      res = await this.fetch(`${API}/repos/${this.repo}/${path}`, {
+      res = await this.fetch(`${API}/repos/${this.repo}${path ? `/${path}` : ''}`, {
         method,
         cache: 'no-store', // GitHub marks reads cacheable for 60s; a stale read would break the next write
         headers: {
@@ -48,7 +50,12 @@ export class GitHubStore {
   // { "2026-11-24": "<file sha>", ... } for every day file in the repo.
   async list() {
     const res = await this.call('GET', 'contents/days');
-    if (res.status === 404) return {};
+    if (res.status === 404) {
+      // No log folder yet is normal on day one. A key that cannot see the repo at all also answers 404,
+      // so ask for the repo itself before calling this "shared".
+      if ((await this.call('GET', '')).status === 404) throw new SyncError('missing', CANNOT_SEE);
+      return {};
+    }
     if (!res.ok) throw new SyncError('other', `GitHub answered ${res.status} listing the log.`);
     const out = {};
     for (const f of await res.json()) {
@@ -78,6 +85,7 @@ export class GitHubStore {
       content: b64encode(JSON.stringify(events)),
       ...(sha ? { sha } : {}),
     });
+    if (res.status === 404) throw new SyncError('missing', CANNOT_SEE);
     if (!res.ok) throw new SyncError('other', `GitHub answered ${res.status} saving ${day}.`);
     return (await res.json()).content.sha;
   }

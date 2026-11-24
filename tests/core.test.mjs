@@ -108,6 +108,8 @@ function fakeGitHub() {
     calls.push(`${opts.method} ${path}`);
     if (fetchImpl.down) throw new TypeError('network');
     if (opts.headers.Authorization !== 'Bearer good') return res(401, {});
+    if (fetchImpl.hidden) return res(404, {}); // a key that was not given this repo: GitHub answers "not found" to everything
+    if (path === undefined) return res(200, {}); // the repo itself
     if (opts.method === 'GET' && path === 'days') {
       const names = Object.keys(files);
       if (!names.length) return res(404, {});
@@ -212,4 +214,20 @@ test('Home Screen steps: the copied text is the shown steps, numbered, with the 
   steps.forEach((s, i) => assert.ok(text.includes(`${i + 1}. ${s}`), `step ${i + 1} is in the copied text`));
   for (const name of ['Add to Home Screen', 'Sync key or setup link', 'Save settings']) assert.ok(text.includes(name), name);
   assert.ok(!/[—]/.test(text));
+});
+
+test('sync: a key that cannot see the repo is reported, never shown as shared', async () => {
+  const gh = fakeGitHub();
+  gh.fetchImpl.hidden = true;
+  const store = new GitHubStore('good', 'o/r', gh.fetchImpl);
+  const empty = phone();
+  await assert.rejects(syncOnce(store, empty), (e) => e instanceof SyncError && e.kind === 'missing' && /cannot see/.test(e.message));
+  const dad = phone();
+  log(dad, ev('2026-11-24-a', 'feed', T0, 1));
+  await assert.rejects(syncOnce(store, dad), (e) => e.kind === 'missing');
+  assert.deepEqual(Object.keys(dad.dirty), ['2026-11-24'], 'the entry stays queued');
+  gh.fetchImpl.hidden = false;
+  assert.equal(await syncOnce(store, empty), false, 'an empty log on a visible repo is fine');
+  await syncOnce(store, dad);
+  assert.deepEqual(dad.dirty, {});
 });
