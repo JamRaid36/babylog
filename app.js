@@ -23,7 +23,7 @@ const state = {
   dirty: store.get('bl.dirty', {}),   // day -> stamp: days with changes not yet sent
   shas: store.get('bl.shas', {}),     // day -> version of the shared file last seen
 };
-let syncInfo = { state: 'local', text: 'This phone only' };
+let syncInfo = { state: 'local', text: 'This phone only. Tap to connect' };
 
 function persist() {
   const ok = store.set('bl.events', state.events) && store.set('bl.dirty', state.dirty) && store.set('bl.shas', state.shas);
@@ -192,7 +192,7 @@ function renderHeader() {
   const btn = $('#syncBtn');
   btn.dataset.state = syncInfo.state;
   $('#syncText').textContent = syncInfo.text;
-  btn.setAttribute('aria-label', `${syncInfo.text}. ${cfg.token ? 'Sync now' : 'Open sharing settings'}`);
+  btn.setAttribute('aria-label', cfg.token ? `${syncInfo.text}. Sync now` : syncInfo.text);
 
   const notice = $('#notice');
   if (syncInfo.state === 'error' && syncInfo.detail) {
@@ -202,7 +202,7 @@ function renderHeader() {
     notice.replaceChildren('Entries are saved on this phone only. ');
     const open = el('button', 'link-btn', 'Share with another phone');
     open.type = 'button';
-    open.addEventListener('click', openSettings);
+    open.addEventListener('click', () => showGuide('connect'));
     notice.append(open);
     notice.hidden = false;
   } else {
@@ -507,7 +507,8 @@ $('#setExport').addEventListener('click', () => {
 });
 
 $('#gearBtn').addEventListener('click', openSettings);
-$('#syncBtn').addEventListener('click', () => (cfg.token ? queueSync(0, true) : openSettings()));
+// Not connected yet: the words under the name are the way back to the Connect screen, however it was left.
+$('#syncBtn').addEventListener('click', () => (cfg.token ? queueSync(0, true) : showGuide('connect')));
 
 // ── Home Screen steps: read them here, or copy them into a text ────────────────────────────────
 const APP_URL = `${location.origin}${location.pathname.replace(/index\.html$/, '')}`;
@@ -725,7 +726,7 @@ let syncing = false;
 let syncAgain = false;
 
 function setSync(kind, detail) {
-  const text = { local: 'This phone only', syncing: 'Syncing', synced: 'Shared', error: 'Not synced' }[kind];
+  const text = { local: 'This phone only. Tap to connect', syncing: 'Syncing', synced: 'Shared', error: 'Not synced' }[kind];
   syncInfo = { state: kind, text, detail };
   renderHeader();
 }

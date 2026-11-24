@@ -133,7 +133,11 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('the Home Screen nudge can show and be dismissed', !d.querySelector('#nudge').hidden && (d.querySelector('#nudgeHide').click(), d.querySelector('#nudge').hidden));
     await load('../index.html?reopen');
     d = frame.contentDocument;
-    check('sharing is off until a key is added', d.querySelector('#syncText').textContent === 'This phone only');
+    check('sharing is off until a key is added', d.querySelector('#syncText').textContent === 'This phone only. Tap to connect');
+    d.querySelector('#syncBtn').click();
+    check('tapping those words brings the Connect screen back', d.querySelector('#guide').open && !d.querySelector('.guide-step[data-step="connect"]').hidden);
+    d.querySelector('.guide-step[data-step="connect"] [data-guide="skip-connect"]').click();
+    check('and it can be left again', !d.querySelector('#guide').open);
 
     // ── setup link from the other phone ──
     const core = await import('../core.js');
