@@ -294,7 +294,7 @@ export function homeScreenSteps(browser) {
     ];
   }
   return [
-    { pic: 'menu', title: 'Tap the menu button, then "Share".', text: 'The menu button is beside the web address and looks like three short lines (three dots on an older iPhone). If you already see a square with an arrow pointing up, tap that instead.' },
+    { pic: 'menu', title: 'Tap the menu button, then "Share".', text: 'The menu button sits at the left end of the web address, at the bottom of the screen. It looks like three short lines (three dots on an older iPhone). If you already see a square with an arrow pointing up, tap that instead.' },
     { pic: 'plus', title: 'Tap "Add to Home Screen".', text: 'Scroll down the list to find it. Not there? Scroll to the very bottom, tap "Edit Actions", then tap the green plus beside "Add to Home Screen".' },
     { pic: 'toggle', title: 'Leave "Open as Web App" switched on.', text: 'It should be green. Tap it if it is not.' },
     { pic: 'add', title: 'Tap "Add".', text: 'You can leave the name as it is.' },
