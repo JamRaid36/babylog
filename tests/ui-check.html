@@ -194,6 +194,61 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('editing a pump hides the side, keeps minutes and ounces', qq('#editSide').hidden && !qq('#feedFields').hidden);
     qq('#editCancel').click();
 
+    // ── how much, in mL (fresh sample data, so the new pump is the top row) ──
+    await load('../index.html?demo&ml0');
+    d = frame.contentDocument;
+    qq('.act[data-log="pump"]').click();
+    check('ounces until someone picks mL', !qq('#trayAmount [data-for-unit="oz"]').hidden && qq('#trayAmount [data-for-unit="ml"]').hidden && qq('#trayAmount .chip[data-unit="oz"]').getAttribute('aria-pressed') === 'true');
+    qq('#trayAmount .chip[data-oz="2"]').click();
+    qq('#trayAmount .chip[data-unit="ml"]').click();
+    check('tapping mL swaps in the mL buttons', qq('#trayAmount [data-for-unit="oz"]').hidden && !qq('#trayAmount [data-for-unit="ml"]').hidden && qq('#trayAmount .chip[data-unit="ml"]').getAttribute('aria-pressed') === 'true');
+    check('and leaves the amount already entered alone', d.querySelector('.row .row-detail')?.textContent === '2 oz' && qq('#trayMl').textContent === '2 oz', d.querySelector('.row .row-detail')?.textContent);
+    qq('#trayAmount .chip[data-ml="45"]').click();
+    check('one tap sets the mL', d.querySelector('.row .row-detail')?.textContent === '45 mL' && qq('#trayMl').textContent === '45 mL' && qq('#trayAmount .chip[data-ml="45"]').getAttribute('aria-pressed') === 'true', d.querySelector('.row .row-detail')?.textContent);
+    qq('#trayAmount .chip[data-step-ml="1"]').click();
+    qq('#trayAmount .chip[data-step-ml="1"]').click();
+    qq('#trayAmount .chip[data-step-ml="-5"]').click();
+    check('+1 and -5 nudge it to the exact mL', d.querySelector('.row .row-detail')?.textContent === '42 mL' && qq('#sincePumpSub').textContent.endsWith('42 mL'), d.querySelector('.row .row-detail')?.textContent);
+    qq('#trayAmount .chip[data-ml="45"]').click();
+    qq('#trayAmount .chip[data-ml="45"]').click();
+    check('tapping the same mL again clears it', !d.querySelector('.row').querySelector('.row-detail') && qq('#trayMl').textContent === 'Not set');
+    qq('#trayAmount .chip[data-ml="30"]').click();
+    qq('#trayAmount .chip[data-step-ml="1"]').click();
+    qq('#trayDone').click();
+    d.querySelector('.row').click();
+    check('editing opens in mL with the exact number', qq('#editSheet').open && qq('#editAmount').value === '31' && qq('#editForm').elements.unit.value === 'ml' && qq('#editAmount').step === '1');
+    qq('#editAmount').value = '37';
+    qq('#editSave').click();
+    check('a typed mL amount is saved as typed', d.querySelector('.row .row-detail')?.textContent.startsWith('37 mL'), d.querySelector('.row .row-detail')?.textContent);
+    d.querySelector('.row').click();
+    d.querySelector('input[name="unit"][value="oz"]').click();
+    qq('#editAmount').value = '1.25';
+    qq('#editSave').click();
+    check('the same entry can be put back in ounces', d.querySelector('.row .row-detail')?.textContent.startsWith('1.25 oz'), d.querySelector('.row .row-detail')?.textContent);
+    d.querySelector('.row').click();
+    qq('#editAmount').value = '';
+    qq('#editSave').click();
+    check('emptying the box clears the amount', !(d.querySelector('.row .row-detail')?.textContent || '').match(/oz|mL/), d.querySelector('.row .row-detail')?.textContent);
+
+    // ── mL is remembered on this phone, and saved exactly ──
+    localStorage.clear();
+    await load('../index.html?ml');
+    d = frame.contentDocument;
+    d.querySelector('#guide [data-who="dad"]').click();
+    d.querySelector('#welcomeOk').click();
+    d.querySelector('.act[data-log="pump"]').click();
+    d.querySelector('#trayAmount .chip[data-unit="ml"]').click();
+    d.querySelector('#trayAmount .chip[data-ml="60"]').click();
+    d.querySelector('#trayAmount .chip[data-step-ml="-1"]').click();
+    const savedMl = Object.values(JSON.parse(localStorage.getItem('bl.events')))[0];
+    check('the entry is stored in mL, with ounces beside it only for an older copy of the app', savedMl.ml === 59 && savedMl.oz === 2, JSON.stringify(savedMl));
+    check('this phone remembers mL', JSON.parse(localStorage.getItem('bl.cfg')).unit === 'ml' && JSON.parse(localStorage.getItem('bl.cfg')).me === 'Dad');
+    await load('../index.html?ml2');
+    d = frame.contentDocument;
+    check('the mL entry reads the same after reopening', d.querySelector('.row .row-detail')?.textContent === '59 mL', d.querySelector('.row .row-detail')?.textContent);
+    d.querySelector('.act[data-log="pump"]').click();
+    check('the next one starts in mL', !d.querySelector('#trayAmount [data-for-unit="ml"]').hidden && d.querySelector('#trayAmount [data-for-unit="oz"]').hidden);
+
     // ── the invite, as an iPhone in Safari: put it on the Home Screen ──
     localStorage.clear();
     const code = core.encodeSetup({ t: 'invite-key', r: 'fam/log', b: 'Jubilee' });

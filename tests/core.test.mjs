@@ -260,6 +260,70 @@ test('pump: its own kind, with ounces and minutes, counted only when there is on
   assert.deepEqual(C.nextSide([ev('2026-11-24-f', 'feed', T0, T0, { side: 'L' }), ev('2026-11-24-p3', 'pump', T0 + 60e3)], T0 + 120e3), { last: 'L', next: 'R' });
 });
 
+test('how much in mL: kept exactly as entered, never turned into ounces on screen', () => {
+  const b = C.clean(ev('2026-11-24-m1', 'feed', T0, T0, { side: 'bottle', ml: 37 }));
+  assert.equal(b.ml, 37);
+  assert.equal(b.oz, 1.25); // 37 / 29.5735, kept only for a phone on an older copy of the app
+  assert.equal(C.amountUnit(b), 'ml');
+  assert.equal(C.amountText(b), '37 mL');
+  assert.equal(C.detail(b), 'Bottle · 37 mL');
+  // cleaning it again (a sync round trip) changes nothing
+  assert.deepEqual(C.clean(b), b);
+  // an entry in ounces is untouched by any of this
+  const o = C.clean(ev('2026-11-24-m2', 'pump', T0, T0, { oz: 2.5 }));
+  assert.deepEqual(o, { id: '2026-11-24-m2', k: 'pump', t: T0, u: T0, oz: 2.5 });
+  assert.equal(C.amountText(o), '2.5 oz');
+  assert.equal(C.amountText({ k: 'pump' }), '');
+  // mL only where an amount means something
+  assert.equal(C.clean(ev('2026-11-24-m3', 'pee', T0, T0, { ml: 30 })).ml, undefined);
+  // junk and silly-high
+  assert.equal(C.clean(ev('2026-11-24-m4', 'pump', T0, T0, { ml: 'lots' })).ml, undefined);
+  assert.equal(C.clean(ev('2026-11-24-m5', 'pump', T0, T0, { ml: 99999 })).ml, 1000);
+  assert.equal(C.clean(ev('2026-11-24-m6', 'pump', T0, T0, { ml: 12.34 })).ml, 12.3);
+});
+
+test('how much: changing or clearing an amount never leaves the other unit behind', () => {
+  const b = C.clean(ev('2026-11-24-w1', 'feed', T0, T0, { side: 'bottle', ml: 45 }));
+  // re-entered in ounces: the mL number goes
+  const asOz = C.clean(C.withAmount(b, 'oz', 2));
+  assert.equal(asOz.oz, 2);
+  assert.equal(asOz.ml, undefined);
+  assert.equal(C.detail(asOz), 'Bottle · 2 oz');
+  // and back to mL
+  const asMl = C.clean(C.withAmount(asOz, 'ml', 50));
+  assert.equal(asMl.ml, 50);
+  assert.equal(C.detail(asMl), 'Bottle · 50 mL');
+  // cleared: both go (a leftover `ml` would bring the amount back)
+  for (const empty of [0, '', undefined, 'x', -3]) {
+    const none = C.clean(C.withAmount(b, 'ml', empty));
+    assert.equal(none.ml, undefined);
+    assert.equal(none.oz, undefined);
+    assert.equal(C.detail(none), 'Bottle');
+  }
+  // nudging: whole mL, starting from what is there
+  assert.equal(C.stepMl(undefined, 5), 5);
+  assert.equal(C.stepMl(45, 1), 46);
+  assert.equal(C.stepMl(45, -5), 40);
+  assert.equal(C.stepMl(2, -5), 0);
+  assert.equal(C.stepMl(1000, 5), 1000);
+  assert.equal(C.amountIn(b, 'ml'), 45);
+  assert.equal(C.amountIn(asOz, 'oz'), 2);
+  assert.equal(C.amountIn(asOz, 'ml'), 59);  // 2 oz, as a starting point for an mL nudge
+  assert.equal(C.amountIn(b, 'oz'), 1.5);    // 45 mL, as a starting point for an ounce nudge
+  assert.equal(C.amountIn({ k: 'pump' }, 'ml'), 0);
+});
+
+test('how much in the spreadsheet: ounces and mL each in their own column, as entered', () => {
+  const csv = C.toCsv([
+    C.clean(ev('2026-11-24-c1', 'feed', T0, T0, { side: 'bottle', ml: 37 })),
+    C.clean(ev('2026-11-24-c2', 'pump', T0 + 60e3, T0, { oz: 2.5, min: 10 })),
+  ]);
+  const [head, first, second] = csv.trim().split('\n');
+  assert.equal(head, 'date,time,type,side,minutes,ounces,mL,note,logged by');
+  assert.ok(first.includes('feed,Bottle,,,37,'), first);
+  assert.ok(second.includes('pump,,10,2.5,,'), second);
+});
+
 test('how much: only where it means something, in half ounces', () => {
   assert.equal(C.hasAmount({ k: 'pump' }), true);
   assert.equal(C.hasAmount({ k: 'feed', side: 'bottle' }), true);

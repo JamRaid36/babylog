@@ -9,7 +9,12 @@
 //   by   who logged it (free text, may be "")
 //   x    true when deleted (kept as a tombstone so a delete reaches the other phone)
 //   feed only: side "L" | "R" | "B" | "bottle" (the side it STARTED on); optional
-//   feed and pump: min (how long, minutes), oz (ounces drunk or pumped); optional
+//   feed and pump: min (how long, minutes); optional
+//   feed and pump: how much was drunk or pumped, optional, kept in the unit it was ENTERED in:
+//     oz  ounces, when it was entered in ounces
+//     ml  millilitres, when it was entered in mL. `ml` is then the real number, and `oz` is written
+//         beside it (ml / 29.5735, two decimals) only so a phone still running an older copy of
+//         the app, which knows nothing of `ml`, keeps the amount instead of dropping it.
 //   note free text, optional
 
 export const KINDS = ['feed', 'pee', 'poop', 'pump'];
@@ -30,6 +35,43 @@ export function minutesSince(t, now = Date.now()) {
 // Ounces move in halves and never go below zero or silly-high.
 export function stepOz(oz, by) {
   return Math.min(20, Math.max(0, Math.round(((oz || 0) + by) * 2) / 2));
+}
+// Millilitres move in whole numbers.
+export const ML_PER_OZ = 29.5735;
+export const ML_MAX = 1000;
+export function stepMl(ml, by) {
+  return Math.min(ML_MAX, Math.max(0, Math.round((ml || 0) + by)));
+}
+export const UNITS = ['oz', 'ml'];
+// The unit an amount was entered in ('ml' or 'oz'), or '' when there is no amount.
+export function amountUnit(e) {
+  if (e && e.ml > 0) return 'ml';
+  if (e && e.oz > 0) return 'oz';
+  return '';
+}
+// The amount exactly as it was entered: "45 mL", "2.5 oz", or "".
+export function amountText(e) {
+  const unit = amountUnit(e);
+  if (unit === 'ml') return `${e.ml} mL`;
+  if (unit === 'oz') return `${e.oz} oz`;
+  return '';
+}
+// The amount as a number in `unit`. Exact when that is the unit it was entered in; otherwise the
+// nearest whole mL or half ounce, which is only used as the starting point for a nudge.
+export function amountIn(e, unit) {
+  const from = amountUnit(e);
+  if (!from) return 0;
+  if (unit === 'ml') return from === 'ml' ? e.ml : Math.round(e.oz * ML_PER_OZ);
+  return from === 'oz' ? e.oz : Math.round((e.ml / ML_PER_OZ) * 2) / 2;
+}
+// The entry with its amount set to `value` in `unit`; nothing, zero or junk clears the amount.
+// Always go through this: setting `oz` alone would leave a stale `ml` behind, and `ml` wins.
+export function withAmount(e, unit, value) {
+  const n = Number(value);
+  const out = { ...e, oz: undefined, ml: undefined };
+  if (!Number.isFinite(n) || n <= 0) return out;
+  if (unit === 'ml') out.ml = n; else out.oz = n;
+  return out;
 }
 export const SIDE_LABEL = { L: 'Left', R: 'Right', B: 'Both sides', bottle: 'Bottle' };
 // `side` on a feed is the side it STARTED on. How it reads under an entry:
@@ -188,12 +230,12 @@ export function fromLocalInput(value) {
   return Number.isFinite(ts) ? ts : null;
 }
 
-// The small line under an entry: "Left · 15 min", "Bottle · 2.5 oz", or "".
+// The small line under an entry: "Left · 15 min", "Bottle · 2.5 oz", "Bottle · 45 mL", or "".
 export function detail(e) {
   const parts = [];
   if (e.k === 'feed' && e.side && SIDE_DETAIL[e.side]) parts.push(SIDE_DETAIL[e.side]);
   if (TIMED.includes(e.k)) {
-    if (e.oz > 0) parts.push(`${e.oz} oz`);
+    if (amountText(e)) parts.push(amountText(e));
     if (e.min > 0) parts.push(`${e.min} min`);
   }
   if (e.note) parts.push(e.note);
@@ -233,13 +275,15 @@ function csvCell(v) {
 }
 
 export function toCsv(events) {
-  const rows = [['date', 'time', 'type', 'side', 'minutes', 'ounces', 'note', 'logged by']];
+  // 'ounces' and 'mL' each hold only what was entered in that unit; nothing is converted.
+  const rows = [['date', 'time', 'type', 'side', 'minutes', 'ounces', 'mL', 'note', 'logged by']];
   for (const e of live(events).reverse()) {
     rows.push([
       dayKey(e.t), toLocalInput(e.t).slice(11), e.k,
       e.k === 'feed' ? (SIDE_LABEL[e.side] || '') : '',
       TIMED.includes(e.k) ? (e.min || '') : '',
-      TIMED.includes(e.k) ? (e.oz || '') : '',
+      TIMED.includes(e.k) && amountUnit(e) === 'oz' ? e.oz : '',
+      TIMED.includes(e.k) && amountUnit(e) === 'ml' ? e.ml : '',
       e.note || '', e.by || '',
     ]);
   }
@@ -332,7 +376,10 @@ export function clean(e) {
   if (e.k === 'feed' && e.side in SIDE_LABEL) out.side = e.side;
   if (TIMED.includes(e.k)) {
     if (Number.isFinite(e.min) && e.min > 0) out.min = Math.min(Math.round(e.min), 600);
-    if (Number.isFinite(e.oz) && e.oz > 0) out.oz = Math.min(Math.round(e.oz * 100) / 100, 99);
+    if (Number.isFinite(e.ml) && e.ml > 0) {
+      out.ml = Math.min(Math.round(e.ml * 10) / 10, ML_MAX);
+      out.oz = Math.round((out.ml / ML_PER_OZ) * 100) / 100; // for older copies of the app only
+    } else if (Number.isFinite(e.oz) && e.oz > 0) out.oz = Math.min(Math.round(e.oz * 100) / 100, 99);
   }
   if (typeof e.note === 'string' && e.note.trim()) out.note = e.note.trim().slice(0, 280);
   return out;

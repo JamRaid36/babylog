@@ -17,7 +17,8 @@ const store = {
 };
 
 // role: 'mom' | 'dad' | 'other' | '' (not asked yet).  feed: what a Feed tap means here, 'breast' | 'bottle'.
-let cfg = { me: '', role: '', feed: '', baby: '', token: '', repo: DEFAULT_REPO, ...store.get('bl.cfg', {}) };
+let cfg = { me: '', role: '', feed: '', unit: '', baby: '', token: '', repo: DEFAULT_REPO, ...store.get('bl.cfg', {}) };
+const unitNow = () => (cfg.unit === 'ml' ? 'ml' : 'oz'); // this phone's unit for amounts; ounces until someone picks mL
 const state = {
   events: store.get('bl.events', {}), // id -> event
   dirty: store.get('bl.dirty', {}),   // day -> stamp: days with changes not yet sent
@@ -81,7 +82,7 @@ function renderSince() {
     $(valueSel).textContent = e ? C.ago(Math.max(0, now - e.t)) : '–';
     let extra = '';
     if (e && kind === 'feed' && e.side) extra = ` · ${C.SIDE_LABEL[e.side]}`;
-    if (e && kind === 'pump' && e.oz > 0) extra = ` · ${e.oz} oz`;
+    if (e && kind === 'pump' && C.amountText(e)) extra = ` · ${C.amountText(e)}`;
     $(subSel).textContent = e ? `${C.clock(e.t)}${extra}` : 'None yet';
   }
   $('#tally').textContent = C.tally(s.day);
@@ -278,8 +279,13 @@ function paintTray() {
   // "How much" only where it means something: a pump, or a bottle feed
   $('#trayAmount').hidden = !C.hasAmount(e);
   $('#trayAmountLabel').textContent = e.k === 'pump' ? 'How much did you get' : 'How much did she drink';
-  for (const chip of document.querySelectorAll('#trayAmount .chip[data-oz]')) chip.setAttribute('aria-pressed', String(Number(chip.dataset.oz) === e.oz));
-  $('#trayOz').textContent = e.oz > 0 ? `${e.oz} oz` : 'Not set';
+  const unit = unitNow();
+  const entered = C.amountUnit(e);
+  for (const chip of document.querySelectorAll('#trayAmount .chip[data-unit]')) chip.setAttribute('aria-pressed', String(chip.dataset.unit === unit));
+  for (const box of document.querySelectorAll('#trayAmount [data-for-unit]')) box.hidden = box.dataset.forUnit !== unit;
+  for (const chip of document.querySelectorAll('#trayAmount .chip[data-oz]')) chip.setAttribute('aria-pressed', String(entered === 'oz' && Number(chip.dataset.oz) === e.oz));
+  for (const chip of document.querySelectorAll('#trayAmount .chip[data-ml]')) chip.setAttribute('aria-pressed', String(entered === 'ml' && Number(chip.dataset.ml) === e.ml));
+  for (const out of document.querySelectorAll('#trayAmount .stepper-value')) out.textContent = C.amountText(e) || 'Not set';
   return undefined;
 }
 
@@ -290,9 +296,18 @@ $('#tray').addEventListener('click', (ev) => {
   if (chip.dataset.back !== undefined) put({ ...e, t: trayBase - Number(chip.dataset.back) * 60e3 });
   else if (chip.dataset.side) {
     const side = e.side === chip.dataset.side ? undefined : chip.dataset.side;
-    put({ ...e, side, oz: side === 'bottle' ? e.oz : undefined }); // ounces belong to a bottle
-  } else if (chip.dataset.oz) put({ ...e, oz: e.oz === Number(chip.dataset.oz) ? undefined : Number(chip.dataset.oz) });
-  else if (chip.dataset.step) put({ ...e, oz: C.stepOz(e.oz, Number(chip.dataset.step)) || undefined });
+    put(side === 'bottle' ? { ...e, side } : C.withAmount({ ...e, side }, '', 0)); // an amount belongs to a bottle
+  } else if (chip.dataset.unit) { // oz or mL: this phone remembers it; the amount already saved is left as it was entered
+    cfg = { ...cfg, unit: chip.dataset.unit };
+    store.set('bl.cfg', cfg);
+  } else if (chip.dataset.oz) {
+    const n = Number(chip.dataset.oz);
+    put(C.withAmount(e, 'oz', C.amountUnit(e) === 'oz' && e.oz === n ? 0 : n)); // the same amount again clears it
+  } else if (chip.dataset.ml) {
+    const n = Number(chip.dataset.ml);
+    put(C.withAmount(e, 'ml', C.amountUnit(e) === 'ml' && e.ml === n ? 0 : n));
+  } else if (chip.dataset.step) put(C.withAmount(e, 'oz', C.stepOz(C.amountIn(e, 'oz'), Number(chip.dataset.step))));
+  else if (chip.dataset.stepMl) put(C.withAmount(e, 'ml', C.stepMl(C.amountIn(e, 'ml'), Number(chip.dataset.stepMl))));
   paintTray();
   armTray(12000);
 });
@@ -331,15 +346,28 @@ function openEdit(id) {
   $('#editWhenError').hidden = true;
   setSideBoxes(e.side);
   $('#editMin').value = e.min || '';
-  $('#editOz').value = e.oz || '';
+  const editUnit = C.amountUnit(e) || unitNow(); // an amount opens in the unit it was entered in
+  $('#editForm').elements.unit.value = editUnit;
+  $('#editAmount').value = C.amountIn(e, editUnit) || '';
+  paintEditUnit();
   $('#editNote').value = e.note || '';
   disarmDelete();
   showFeedFields();
   editSheet.showModal();
 }
 
+// The amount box takes whole mL, or ounces down to a quarter.
+function paintEditUnit() {
+  const ml = $('#editForm').elements.unit.value === 'ml';
+  const box = $('#editAmount');
+  box.step = ml ? '1' : '0.25';
+  box.max = ml ? String(C.ML_MAX) : '99';
+  box.inputMode = ml ? 'numeric' : 'decimal';
+}
+
 $('#editForm').addEventListener('change', (ev) => {
   if (ev.target.name === 'kind') showFeedFields();
+  if (ev.target.name === 'unit') paintEditUnit(); // the number typed stays; only what it is measured in changes
   if (ev.target.name === 'side' && ev.target.checked) setSideBoxes(ev.target.value); // one side at most
 });
 
@@ -357,13 +385,13 @@ $('#editForm').addEventListener('submit', (ev) => {
   const side = document.querySelector('#editForm input[name="side"]:checked');
   // keep the tapped second unless the minute was actually changed
   const t = C.toLocalInput(e.t) === $('#editWhen').value ? e.t : when;
-  put({
+  const timed = kind === 'feed' || kind === 'pump';
+  put(C.withAmount({
     id: e.id, by: e.by, k: kind, t,
     side: kind === 'feed' && side ? side.value : undefined,
-    min: kind === 'feed' || kind === 'pump' ? Number($('#editMin').value) : undefined,
-    oz: kind === 'feed' || kind === 'pump' ? Number($('#editOz').value) : undefined,
+    min: timed ? Number($('#editMin').value) : undefined,
     note: $('#editNote').value,
-  });
+  }, $('#editForm').elements.unit.value, timed ? $('#editAmount').value : 0));
   editSheet.close();
   toast('Entry saved.');
   return undefined;
@@ -803,6 +831,7 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   const show = new URLSearchParams(location.search).get('demo');
   if (show === 'tray') logNow('feed');
   if (show === 'pump') logNow('pump');
+  if (show === 'pump-ml') { cfg = { ...cfg, unit: 'ml' }; logNow('pump'); }
   if (show === 'edit') openEdit(C.live(Object.values(state.events))[0].id);
   if (show === 'settings') openSettings();
   if (show === 'help') openHelp();

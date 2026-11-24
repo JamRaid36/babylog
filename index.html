@@ -195,16 +195,37 @@
   </div>
   <div id="trayAmount" hidden>
     <p class="eyebrow tray-label" id="trayAmountLabel">How much</p>
-    <div class="chips" role="group" aria-labelledby="trayAmountLabel">
-      <button type="button" class="chip" data-oz="1" aria-pressed="false">1 oz</button>
-      <button type="button" class="chip" data-oz="2" aria-pressed="false">2 oz</button>
-      <button type="button" class="chip" data-oz="3" aria-pressed="false">3 oz</button>
-      <button type="button" class="chip" data-oz="4" aria-pressed="false">4 oz</button>
+    <div class="unit-pick" role="group" aria-label="Measure in">
+      <button type="button" class="chip" data-unit="oz" aria-pressed="true" aria-label="Measure in ounces">oz</button>
+      <button type="button" class="chip" data-unit="ml" aria-pressed="false" aria-label="Measure in millilitres">mL</button>
     </div>
-    <div class="stepper">
-      <button type="button" class="chip" data-step="-0.5" aria-label="Half an ounce less">&minus; &frac12;</button>
-      <p class="stepper-value" id="trayOz" aria-live="polite">Not set</p>
-      <button type="button" class="chip" data-step="0.5" aria-label="Half an ounce more">+ &frac12;</button>
+    <div data-for-unit="oz">
+      <div class="chips" role="group" aria-labelledby="trayAmountLabel">
+        <button type="button" class="chip" data-oz="1" aria-pressed="false">1 oz</button>
+        <button type="button" class="chip" data-oz="2" aria-pressed="false">2 oz</button>
+        <button type="button" class="chip" data-oz="3" aria-pressed="false">3 oz</button>
+        <button type="button" class="chip" data-oz="4" aria-pressed="false">4 oz</button>
+      </div>
+      <div class="stepper">
+        <button type="button" class="chip" data-step="-0.5" aria-label="Half an ounce less">&minus; &frac12;</button>
+        <p class="stepper-value" id="trayOz" aria-live="polite">Not set</p>
+        <button type="button" class="chip" data-step="0.5" aria-label="Half an ounce more">+ &frac12;</button>
+      </div>
+    </div>
+    <div data-for-unit="ml" hidden>
+      <div class="chips" role="group" aria-labelledby="trayAmountLabel">
+        <button type="button" class="chip" data-ml="15" aria-pressed="false">15 mL</button>
+        <button type="button" class="chip" data-ml="30" aria-pressed="false">30 mL</button>
+        <button type="button" class="chip" data-ml="45" aria-pressed="false">45 mL</button>
+        <button type="button" class="chip" data-ml="60" aria-pressed="false">60 mL</button>
+      </div>
+      <div class="stepper stepper-ml">
+        <button type="button" class="chip" data-step-ml="-5" aria-label="5 millilitres less">&minus; 5</button>
+        <button type="button" class="chip" data-step-ml="-1" aria-label="1 millilitre less">&minus; 1</button>
+        <p class="stepper-value" id="trayMl" aria-live="polite">Not set</p>
+        <button type="button" class="chip" data-step-ml="1" aria-label="1 millilitre more">+ 1</button>
+        <button type="button" class="chip" data-step-ml="5" aria-label="5 millilitres more">+ 5</button>
+      </div>
     </div>
   </div>
   <p class="eyebrow tray-label">Happened earlier? Tap how long ago</p>
@@ -271,10 +292,15 @@
           <input type="number" id="editMin" name="minutes" autocomplete="off" inputmode="numeric" min="0" max="600" step="1">
         </label>
         <label class="field">
-          <span class="eyebrow">Ounces (optional)</span>
-          <input type="number" id="editOz" name="ounces" autocomplete="off" inputmode="decimal" min="0" max="99" step="0.25">
+          <span class="eyebrow">How much (optional)</span>
+          <input type="number" id="editAmount" name="amount" autocomplete="off" inputmode="decimal" min="0" max="99" step="0.25">
         </label>
       </div>
+      <fieldset class="seg seg-2 seg-tight">
+        <legend class="eyebrow">Measured in</legend>
+        <label><input type="radio" name="unit" value="oz" checked><span>Ounces</span></label>
+        <label><input type="radio" name="unit" value="ml"><span>mL</span></label>
+      </fieldset>
     </div>
 
     <label class="field">
@@ -437,6 +463,7 @@
       <li>That's it. It's saved with the time.</li>
     </ol>
     <p>After a <strong>Feed</strong>, two big buttons ask which side she <strong>started on</strong>: tap <strong>Left</strong> or <strong>Right</strong> (or <strong>Bottle</strong>). One tap, no typing. The front page then tells you which side to start on next time.</p>
+    <p>After a <strong>Bottle</strong> feed or a <strong>Pump</strong>, the tray asks how much. Tap <strong>oz</strong> or <strong>mL</strong> first, whichever you measure in; this phone remembers. Then tap an amount, or nudge it to the exact number.</p>
     <p>The little tray that pops up also lets you <strong>Undo</strong> or say it happened earlier. Ignore it and it goes away.</p>
   </section>
 
