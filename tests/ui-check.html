@@ -86,7 +86,7 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('a tap opens them', q('#install').open);
     const steps = [...d.querySelectorAll('#installSteps li')].map((li) => li.textContent);
     const appUrl = frame.contentWindow.location.origin + frame.contentWindow.location.pathname.replace(/index\.html$/, '');
-    check('five steps, the first with this app\'s own link', steps.length === 5 && steps[0].endsWith(appUrl), steps[0]);
+    check('four steps, the first with this app\'s own link', steps.length === 4 && steps[0].endsWith(appUrl), steps[0]);
     q('#installCopy').click();
     await wait(1800);
     check('Copy answers either way', /^(Steps copied|Could not copy)/.test(q('#toastText').textContent), q('#toastText').textContent);
@@ -108,10 +108,14 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     await load('../index.html');
     d = frame.contentDocument;
     check('first open is empty with a hint', d.querySelector('.empty-title')?.textContent === 'Nothing logged yet');
-    check('first open says welcome', d.querySelector('#welcomeSheet').open);
+    check('first open asks whose phone this is', d.querySelector('#guide').open && !d.querySelector('.guide-step[data-step="who"]').hidden);
+    check('only one guide screen shows at a time', d.querySelectorAll('.guide-step:not([hidden])').length === 1);
+    d.querySelector('#guide [data-who="mom"]').click();
+    check('one tap on Mom is the whole answer', JSON.parse(localStorage.getItem('bl.cfg')).me === 'Mom' && JSON.parse(localStorage.getItem('bl.cfg')).feed === 'breast');
+    check('then the tips, once', !d.querySelector('#guide').open && d.querySelector('#welcomeSheet').open);
     d.querySelector('#welcomeMore').click();
     check('"Show me more" opens the full help', !d.querySelector('#welcomeSheet').open && d.querySelector('#helpSheet').open);
-    check('help covers joining a shared log', d.querySelector('#helpSheet').textContent.includes('Sync key or setup link') && d.querySelector('#helpSheet').textContent.includes('Save settings'));
+    check('help covers joining a shared log', d.querySelector('#helpSheet').textContent.includes('Invite another phone') && d.querySelector('#helpSheet').textContent.includes('walks you through'));
     d.querySelector('#helpInstall').click();
     check('help can jump to the Home Screen steps', !d.querySelector('#helpSheet').open && d.querySelector('#install').open);
     d.querySelector('#helpBtn').click();
@@ -145,6 +149,108 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     const cfg2 = JSON.parse(localStorage.getItem('bl.cfg') || '{}');
     check('a setup link pasted into Settings works too', cfg2.token === 'pasted-key' && cfg2.repo === 'other/place', JSON.stringify(cfg2));
     check('the two entries are queued to share', Object.keys(JSON.parse(localStorage.getItem('bl.dirty') || '{}')).length >= 1);
+
+    // ── pump, how much, how long (sample data) ──
+    await load('../index.html?demo&pump');
+    d = frame.contentDocument;
+    const qq = (s) => d.querySelector(s);
+    check('four one-tap buttons', d.querySelectorAll('.act').length === 4 && qq('.act[data-log="pump"] .act-label').textContent === 'Pump');
+    check('four "last" tiles', d.querySelectorAll('.since-item').length === 4 && qq('#sincePumpSub').textContent === 'None yet');
+    qq('.act[data-log="pump"]').click();
+    check('a pump asks how much, not which side', !qq('#trayAmount').hidden && qq('#traySide').hidden && qq('#trayAmountLabel').textContent === 'How much did you get');
+    qq('#trayAmount .chip[data-oz="3"]').click();
+    check('one tap sets the ounces', d.querySelector('.row .row-detail')?.textContent === '3 oz' && qq('#trayOz').textContent === '3 oz');
+    qq('#trayAmount .chip[data-step="0.5"]').click();
+    check('+ half nudges it', d.querySelector('.row .row-detail')?.textContent === '3.5 oz' && qq('#sincePumpSub').textContent.endsWith('3.5 oz'));
+    qq('#trayAmount .chip[data-step="-0.5"]').click();
+    qq('#trayAmount .chip[data-oz="3"]').click();
+    check('tapping the same amount again clears it', !d.querySelector('.row').querySelector('.row-detail') && qq('#trayOz').textContent === 'Not set', qq('#trayOz').textContent);
+    qq('#trayDone').click();
+    check('a pump just started shows as going, with one Done button', !qq('#running').hidden && qq('#runningWhat').textContent === 'Pumping' && qq('#runningDone').textContent === 'Done pumping');
+    qq('#runningDone').click();
+    check('Done saves how long it took', d.querySelector('.row .row-detail')?.textContent === '1 min' && qq('#running').hidden, d.querySelector('.row .row-detail')?.textContent);
+    check('the count line names pumps once there is one', qq('#tally').textContent.endsWith('1 pump'));
+    qq('.act[data-log="feed"]').click();
+    check('a feed asks the side first, and how much only for a bottle', !qq('#traySide').hidden && qq('#trayAmount').hidden);
+    qq('#traySide .chip[data-side="bottle"]').click();
+    check('Bottle brings up how much', !qq('#trayAmount').hidden && qq('#trayAmountLabel').textContent === 'How much did she drink');
+    qq('#trayAmount .chip[data-oz="2"]').click();
+    const feedRow = () => [...d.querySelectorAll('.row')].find((r) => r.querySelector('.row-kind').textContent === 'Feed'); // the feed and the pump can share a millisecond here
+    check('bottle and ounces read together', feedRow().querySelector('.row-detail')?.textContent === 'Bottle · 2 oz', feedRow().textContent);
+    qq('#traySide .chip[data-side="L"]').click();
+    check('switching to a breast drops the ounces', feedRow().querySelector('.row-detail')?.textContent === 'Started left' && qq('#trayAmount').hidden, feedRow().textContent);
+    qq('#trayDone').click();
+    feedRow().click();
+    d.querySelector('input[name="kind"][value="pump"]').click();
+    check('editing a pump hides the side, keeps minutes and ounces', qq('#editSide').hidden && !qq('#feedFields').hidden);
+    qq('#editCancel').click();
+
+    // ── the invite, as an iPhone in Safari: put it on the Home Screen ──
+    localStorage.clear();
+    const code = core.encodeSetup({ t: 'invite-key', r: 'fam/log', b: 'Jubilee' });
+    await load(`../index.html?as=safari#s=${code}`);
+    d = frame.contentDocument;
+    const step = (name) => !d.querySelector(`.guide-step[data-step="${name}"]`).hidden;
+    check('an invite opened in Safari says hello first', d.querySelector('#guide').open && step('hello'));
+    check('the invite is kept in the address, so Add to Home Screen carries it', frame.contentWindow.location.hash === `#s=${code}`);
+    check('and this phone is connected already', JSON.parse(localStorage.getItem('bl.cfg')).token === 'invite-key');
+    d.querySelector('#guideGo').click();
+    check("Let's go shows the four Home Screen steps", step('install') && d.querySelectorAll('.guide-list li').length === 4);
+    check('the steps name the real buttons', ['Share button', 'Add to Home Screen', 'Tap "Add"', 'Look for this picture'].every((t) => d.querySelector('.guide-list').textContent.includes(t)));
+    check('it says the shared log comes along', d.querySelector('#guideCarry').textContent === 'Your shared log comes along with it.');
+    d.querySelector('.guide-step[data-step="install"] [data-guide="later"]').click();
+    check('"Not now" moves on to whose phone', step('who'));
+    d.querySelector('#guide [data-who="dad"]').click();
+    check('after the guide the small reminder stays', !d.querySelector('#guide').open && !d.querySelector('#nudge').hidden);
+    d.querySelector('#welcomeOk').click();
+    d.querySelector('#nudgeShow').click();
+    check('the reminder reopens the pictured steps', d.querySelector('#guide').open && step('install'));
+
+    // ── the Home Screen app: the address carried the invite ──
+    localStorage.clear();
+    await load(`../index.html?as=home#s=${code}`);
+    d = frame.contentDocument;
+    check('opens connected, key gone from the address', JSON.parse(localStorage.getItem('bl.cfg')).token === 'invite-key' && !frame.contentWindow.location.hash);
+    check('and goes straight to whose phone', d.querySelector('#guide').open && !d.querySelector('.guide-step[data-step="who"]').hidden);
+    check('the baby name came with the invite', d.querySelector('#babyName').textContent === 'Jubilee');
+    d.querySelector('#guide [data-who="dad"]').click();
+    d.querySelector('#welcomeOk').click();
+    d.querySelector('.act[data-log="feed"]').click();
+    check("on Dad's phone a feed starts as Bottle and asks how much", d.querySelector('.row .row-detail')?.textContent === 'Bottle' && !d.querySelector('#trayAmount').hidden);
+    check('Left and Right are still there', !d.querySelector('#traySide').hidden && d.querySelectorAll('#traySide .chip').length === 3);
+    check('the entry carries his name', d.querySelector('.row .row-by').textContent === 'Dad');
+    d.querySelector('#trayDone').click();
+    check('the invite card offers to share with Mom', !d.querySelector('#invite').hidden && d.querySelector('#inviteTitle').textContent === 'Share Jubilee with Mom');
+    d.querySelector('#gearBtn').click();
+    check('Settings shows Dad and Bottle picked, the key folded away', d.querySelector('input[name="who"][value="dad"]').checked && d.querySelector('input[name="feedkind"][value="bottle"]').checked && !d.querySelector('#setAdv').open && !d.querySelector('#setShare').hidden);
+    d.querySelector('input[name="who"][value="mom"]').click();
+    check('picking Mom switches the usual feed to Breast', d.querySelector('input[name="feedkind"][value="breast"]').checked);
+    d.querySelector('#setCancel').click();
+    await load(`../index.html?as=home&again#s=${code}`);
+    d = frame.contentDocument;
+    check('opening it again asks nothing', !d.querySelector('#guide').open && !d.querySelector('#welcomeSheet').open && d.querySelector('#toast').hidden);
+    check('and the entry is still there', d.querySelectorAll('.row').length === 1);
+
+    // ── the Home Screen app when the address did not carry it: one Connect button ──
+    localStorage.clear();
+    await load('../index.html?as=home&bare');
+    d = frame.contentDocument;
+    check('with no log yet it offers Connect', d.querySelector('#guide').open && !d.querySelector('.guide-step[data-step="connect"]').hidden);
+    d.querySelector('#guidePaste').value = 'not a link';
+    d.querySelector('#guidePasteGo').click();
+    check('a wrong paste is refused with a reason', !d.querySelector('#guidePasteError').hidden && !JSON.parse(localStorage.getItem('bl.cfg') || '{}').token);
+    d.querySelector('#guidePaste').value = `Tap this to set up Jubilee. https://x.test/babylog/#s=${code}`;
+    d.querySelector('#guidePasteGo').click();
+    check('the whole text message pasted in connects it', JSON.parse(localStorage.getItem('bl.cfg')).token === 'invite-key' && !d.querySelector('.guide-step[data-step="who"]').hidden);
+    d.querySelector('#guideWhoOther').click();
+    d.querySelector('#guideName').value = 'Grandma';
+    d.querySelector('#guideNameGo').click();
+    check('someone else can type a name', JSON.parse(localStorage.getItem('bl.cfg')).me === 'Grandma' && !d.querySelector('#guide').open);
+    localStorage.clear();
+    await load('../index.html?as=home&skip');
+    d = frame.contentDocument;
+    d.querySelector('.guide-step[data-step="connect"] [data-guide="skip-connect"]').click();
+    check('Connect can be skipped', !d.querySelector('.guide-step[data-step="who"]').hidden);
   } catch (err) {
     check('the check itself ran', false, String(err && err.stack || err));
   } finally {

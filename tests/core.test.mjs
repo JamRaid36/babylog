@@ -41,7 +41,7 @@ test('summarize: last of each kind, 24h counts, deleted and future entries ignor
   assert.equal(s.last.feed.id, '2026-11-24-a');
   assert.equal(s.last.pee.id, '2026-11-24-d');
   assert.equal(s.last.poop, null);
-  assert.deepEqual(s.day, { feed: 2, pee: 1, poop: 0 });
+  assert.deepEqual(s.day, { feed: 2, pee: 1, poop: 0, pump: 0 });
 });
 
 test('ago: wording at each scale', () => {
@@ -67,7 +67,7 @@ test('groupByDay: newest first with per-day counts', () => {
   assert.equal(g.length, 2);
   assert.equal(g[0].label, 'Today');
   assert.deepEqual(g[0].items.map((e) => e.id), ['2026-11-24-a', '2026-11-24-b']);
-  assert.deepEqual(g[1].count, { feed: 0, pee: 0, poop: 1 });
+  assert.deepEqual(g[1].count, { feed: 0, pee: 0, poop: 1, pump: 0 });
   assert.equal(C.tally(g[0].count), '1 feed · 1 pee · 0 poops');
 });
 
@@ -209,10 +209,10 @@ test('Home Screen steps: the copied text is the shown steps, numbered, with the 
   const url = 'https://example.test/babylog/';
   const steps = C.installSteps(url);
   const text = C.installText(url);
-  assert.equal(steps.length, 5);
+  assert.equal(steps.length, 4);
   assert.ok(steps[0].endsWith(url));
   steps.forEach((s, i) => assert.ok(text.includes(`${i + 1}. ${s}`), `step ${i + 1} is in the copied text`));
-  for (const name of ['Add to Home Screen', 'Sync key or setup link', 'Save settings']) assert.ok(text.includes(name), name);
+  for (const name of ['Add to Home Screen', 'Share button', 'walks you through']) assert.ok(text.includes(name), name);
   assert.ok(!/[—]/.test(text));
 });
 
@@ -245,4 +245,90 @@ test('next side: the opposite of where the latest breast feed started', () => {
   assert.equal(C.nextSide([f(1, 3, { side: 'L' }), f(2, 1, { side: 'B' })], now), null);
   // a deleted feed and a pee are ignored
   assert.deepEqual(C.nextSide([f(1, 3, { side: 'L' }), { ...f(2, 1, { side: 'R' }), x: true }, ev('2026-11-24-n3', 'pee', now - 60e3, T0)], now), { last: 'L', next: 'R' });
+});
+
+test('pump: its own kind, with ounces and minutes, counted only when there is one', () => {
+  const p = C.clean(ev('2026-11-24-p1', 'pump', T0, T0, { oz: 3.5, min: 18, side: 'L' }));
+  assert.deepEqual(p, { id: '2026-11-24-p1', k: 'pump', t: T0, u: T0, oz: 3.5, min: 18 }); // a pump has no side
+  assert.equal(C.detail(p), '3.5 oz · 18 min');
+  assert.equal(C.clean(ev('2026-11-24-p2', 'pee', T0, T0, { oz: 2 })).oz, undefined);
+  assert.equal(C.tally({ feed: 1, pee: 0, poop: 0, pump: 0 }), '1 feed · 0 pees · 0 poops');
+  assert.equal(C.tally({ feed: 1, pee: 0, poop: 0, pump: 2 }), '1 feed · 0 pees · 0 poops · 2 pumps');
+  assert.equal(C.summarize([p], T0 + 60e3).last.pump.id, '2026-11-24-p1');
+  assert.ok(C.toCsv([p]).includes('pump,,18,3.5'));
+  // pumping empties both sides, so it does not change which side a feed starts on
+  assert.deepEqual(C.nextSide([ev('2026-11-24-f', 'feed', T0, T0, { side: 'L' }), ev('2026-11-24-p3', 'pump', T0 + 60e3)], T0 + 120e3), { last: 'L', next: 'R' });
+});
+
+test('how much: only where it means something, in half ounces', () => {
+  assert.equal(C.hasAmount({ k: 'pump' }), true);
+  assert.equal(C.hasAmount({ k: 'feed', side: 'bottle' }), true);
+  assert.equal(C.hasAmount({ k: 'feed', side: 'L' }), false);
+  assert.equal(C.hasAmount({ k: 'pee' }), false);
+  assert.equal(C.stepOz(undefined, 0.5), 0.5);
+  assert.equal(C.stepOz(2, 0.5), 2.5);
+  assert.equal(C.stepOz(0, -0.5), 0);
+  assert.equal(C.stepOz(20, 0.5), 20);
+});
+
+test('how long: the newest feed or pump runs until Done, and is never guessed', () => {
+  const now = T0 + 3 * 3600e3;
+  const m = 60e3;
+  const feed = ev('2026-11-24-r1', 'feed', now - 8 * m);
+  assert.equal(C.running([feed], now).id, feed.id);
+  assert.equal(C.minutesSince(feed.t, now), 8);
+  assert.equal(C.minutesSince(now, now), 1); // never zero minutes
+  assert.equal(C.running([{ ...feed, min: 8 }], now), null);               // finished
+  assert.equal(C.running([ev('2026-11-24-r2', 'feed', now - 91 * m)], now), null); // forgotten: left blank
+  assert.equal(C.running([{ ...feed, x: true }], now), null);              // deleted
+  assert.equal(C.running([ev('2026-11-24-r3', 'pee', now - m)], now), null);
+  // a pee after it does not hide it; a newer pump takes over
+  assert.equal(C.running([feed, ev('2026-11-24-r4', 'pee', now - m)], now).id, feed.id);
+  const pump = ev('2026-11-24-r5', 'pump', now - 2 * m);
+  assert.equal(C.running([feed, pump], now).id, pump.id);
+  // the newest one is finished: an older unfinished one stays blank rather than come back
+  assert.equal(C.running([feed, { ...pump, min: 2 }], now), null);
+});
+
+test('whose phone: Mom is asked the side, Dad starts on Bottle, both can change it', () => {
+  assert.deepEqual(C.feedDefaults({ feed: 'bottle' }), { side: 'bottle' });
+  assert.deepEqual(C.feedDefaults({ feed: 'breast' }), {});
+  assert.deepEqual(C.feedDefaults({}), {});
+  assert.equal(C.ROLES.mom.feed, 'breast');
+  assert.equal(C.ROLES.dad.feed, 'bottle');
+  assert.equal(C.ROLES.dad.other, 'Mom');
+});
+
+test('first-run guide: each phone gets only the screen it still needs', () => {
+  const base = { iphone: true, standalone: false, hasToken: false, hasRole: false, later: false, skippedConnect: false };
+  assert.equal(C.firstScreen(base), 'install');                                        // Safari on an iPhone
+  assert.equal(C.firstScreen({ ...base, later: true }), 'who');                        // "not now"
+  assert.equal(C.firstScreen({ ...base, standalone: true }), 'connect');               // Home Screen, no log yet
+  assert.equal(C.firstScreen({ ...base, standalone: true, hasToken: true }), 'who');   // the invite carried over
+  assert.equal(C.firstScreen({ ...base, standalone: true, skippedConnect: true }), 'who');
+  assert.equal(C.firstScreen({ ...base, standalone: true, hasToken: true, hasRole: true }), null);
+  assert.equal(C.firstScreen({ ...base, iphone: false }), 'who');                      // a computer: no Home Screen step
+  assert.equal(C.firstScreen({ ...base, iphone: false, hasRole: true }), null);
+});
+
+test('invite: found in a whole text message, a link or the bare code; anything else is refused', () => {
+  const code = C.encodeSetup({ t: 'github_pat_abc', r: 'someone/babylog-data', b: 'Jubilee' });
+  const want = { t: 'github_pat_abc', r: 'someone/babylog-data', b: 'Jubilee' };
+  assert.deepEqual(C.findSetup(`Tap this to set up Jubilee. https://x.test/babylog/#s=${code}`), want);
+  assert.deepEqual(C.findSetup(`https://x.test/babylog/#s=${code}\n`), want);
+  assert.deepEqual(C.findSetup(code), want);
+  assert.equal(C.findSetup('see you at 5'), null);
+  assert.equal(C.findSetup(''), null);
+  assert.equal(C.findSetup(undefined), null);
+  assert.equal(C.sameSetup({ token: 'github_pat_abc', repo: 'someone/babylog-data' }, want), true);
+  assert.equal(C.sameSetup({ token: 'other', repo: 'someone/babylog-data' }, want), false);
+  assert.equal(C.sameSetup({ token: '', repo: '' }, null), false);
+});
+
+test('invite card: goes away once someone else has logged', () => {
+  const mine = ev('2026-11-24-i1', 'pee', T0, T0, { by: 'Dad' });
+  assert.equal(C.othersHaveLogged([mine], 'Dad'), false);
+  assert.equal(C.othersHaveLogged([mine, ev('2026-11-24-i2', 'pee', T0)], 'Dad'), false); // no name on it: not proof
+  assert.equal(C.othersHaveLogged([mine, ev('2026-11-24-i3', 'feed', T0, T0, { by: 'Mom' })], 'Dad'), true);
+  assert.equal(C.othersHaveLogged([{ ...ev('2026-11-24-i4', 'feed', T0, T0, { by: 'Mom' }), x: true }], 'Dad'), false);
 });

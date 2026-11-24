@@ -3,16 +3,34 @@
 // Event shape (short keys keep the synced files small):
 //   id   "YYYY-MM-DD-<base36>"  the date part is the UTC day it was CREATED and never changes;
 //                               it names the file ("bucket") the event is stored in
-//   k    "feed" | "pee" | "poop"
+//   k    "feed" | "pee" | "poop" | "pump"
 //   t    when it happened (ms since epoch)
 //   u    when it was last changed (ms); the newer copy wins a merge
 //   by   who logged it (free text, may be "")
 //   x    true when deleted (kept as a tombstone so a delete reaches the other phone)
-//   feed only: side "L" | "R" | "B" | "bottle", min (minutes), oz (ounces); all optional
+//   feed only: side "L" | "R" | "B" | "bottle" (the side it STARTED on); optional
+//   feed and pump: min (how long, minutes), oz (ounces drunk or pumped); optional
 //   note free text, optional
 
-export const KINDS = ['feed', 'pee', 'poop'];
-export const KIND_LABEL = { feed: 'Feed', pee: 'Pee', poop: 'Poop' };
+export const KINDS = ['feed', 'pee', 'poop', 'pump'];
+export const KIND_LABEL = { feed: 'Feed', pee: 'Pee', poop: 'Poop', pump: 'Pump' };
+const TIMED = ['feed', 'pump']; // the kinds that last a while and can carry minutes and ounces
+export const hasAmount = (e) => !!e && (e.k === 'pump' || (e.k === 'feed' && e.side === 'bottle'));
+
+// The feed or pump that is still going: the newest one, started in the last 90 minutes, with no
+// length yet. Anything older was simply never finished off, and we do not invent a length for it.
+export function running(events, now = Date.now()) {
+  const e = live(events).find((x) => TIMED.includes(x.k) && x.t <= now + MIN);
+  if (!e || e.min > 0 || now - e.t > 90 * MIN) return null;
+  return e;
+}
+export function minutesSince(t, now = Date.now()) {
+  return Math.max(1, Math.round((now - t) / MIN));
+}
+// Ounces move in halves and never go below zero or silly-high.
+export function stepOz(oz, by) {
+  return Math.min(20, Math.max(0, Math.round(((oz || 0) + by) * 2) / 2));
+}
 export const SIDE_LABEL = { L: 'Left', R: 'Right', B: 'Both sides', bottle: 'Bottle' };
 // `side` on a feed is the side it STARTED on. How it reads under an entry:
 export const SIDE_DETAIL = { L: 'Started left', R: 'Started right', B: 'Both sides', bottle: 'Bottle' };
@@ -27,6 +45,47 @@ export function nextSide(events, now = Date.now()) {
     return null;
   }
   return null;
+}
+
+// Who holds this phone. It sets the name on what they log and what a Feed tap means there:
+// Mom's phone asks which side; Dad's phone marks a feed as a bottle (one tap changes it).
+export const ROLES = {
+  mom: { me: 'Mom', feed: 'breast', other: 'Dad' },
+  dad: { me: 'Dad', feed: 'bottle', other: 'Mom' },
+};
+
+// The side a brand-new feed starts with on this phone, before anyone taps anything.
+export function feedDefaults(cfg) {
+  return cfg && cfg.feed === 'bottle' ? { side: 'bottle' } : {};
+}
+
+// Is this the log this phone is already connected to?
+export function sameSetup(cfg, setup) {
+  return !!setup && !!cfg && cfg.token === setup.t && cfg.repo === setup.r;
+}
+
+// Pull our setup out of anything pasted or copied: a whole text message, a link, or the bare code.
+export function findSetup(text) {
+  const s = String(text || '').trim();
+  const m = /#s=([\w-]+)/.exec(s);
+  if (m) return decodeSetup(m[1]);
+  return /^[\w-]{20,}$/.test(s) ? decodeSetup(s) : null;
+}
+
+// Which first-run screen this phone needs next, or null when it needs none.
+//   install  in Safari on an iPhone: put it on the Home Screen
+//   connect  on the Home Screen with no shared log yet
+//   who      nobody has said whose phone this is
+export function firstScreen({ iphone, standalone, hasToken, hasRole, later, skippedConnect }) {
+  if (iphone && !standalone && !later) return 'install';
+  if (iphone && standalone && !hasToken && !skippedConnect) return 'connect';
+  if (!hasRole) return 'who';
+  return null;
+}
+
+// Has anyone other than this phone's owner logged something? Then the other phone is already in.
+export function othersHaveLogged(events, me) {
+  return live(events).some((e) => e.by && e.by !== me);
 }
 
 const MIN = 60 * 1000;
@@ -73,8 +132,8 @@ export function live(events) {
 
 // Latest event of each kind, and counts over the 24 hours before `now`.
 export function summarize(events, now = Date.now()) {
-  const last = { feed: null, pee: null, poop: null };
-  const day = { feed: 0, pee: 0, poop: 0 };
+  const last = { feed: null, pee: null, poop: null, pump: null };
+  const day = { feed: 0, pee: 0, poop: 0, pump: 0 };
   for (const e of live(events)) {
     if (!(e.k in last)) continue;
     if (e.t > now + MIN) continue; // an entry dated in the future is not "last"
@@ -129,10 +188,10 @@ export function fromLocalInput(value) {
 // The small line under an entry: "Left · 15 min", "Bottle · 2.5 oz", or "".
 export function detail(e) {
   const parts = [];
-  if (e.k === 'feed') {
-    if (e.side && SIDE_DETAIL[e.side]) parts.push(SIDE_DETAIL[e.side]);
-    if (e.min > 0) parts.push(`${e.min} min`);
+  if (e.k === 'feed' && e.side && SIDE_DETAIL[e.side]) parts.push(SIDE_DETAIL[e.side]);
+  if (TIMED.includes(e.k)) {
     if (e.oz > 0) parts.push(`${e.oz} oz`);
+    if (e.min > 0) parts.push(`${e.min} min`);
   }
   if (e.note) parts.push(e.note);
   return parts.join(' · ');
@@ -145,7 +204,7 @@ export function groupByDay(events, now = Date.now()) {
   for (const e of live(events)) {
     const key = dayKey(e.t);
     if (!cur || cur.key !== key) {
-      cur = { key, label: dayLabel(e.t, now), items: [], count: { feed: 0, pee: 0, poop: 0 } };
+      cur = { key, label: dayLabel(e.t, now), items: [], count: { feed: 0, pee: 0, poop: 0, pump: 0 } };
       groups.push(cur);
     }
     cur.items.push(e);
@@ -161,6 +220,7 @@ export function tally(count) {
     plural(count.feed, 'feed', 'feeds'),
     plural(count.pee, 'pee', 'pees'),
     plural(count.poop, 'poop', 'poops'),
+    ...(count.pump ? [plural(count.pump, 'pump', 'pumps')] : []),
   ].join(' · ');
 }
 
@@ -175,8 +235,8 @@ export function toCsv(events) {
     rows.push([
       dayKey(e.t), toLocalInput(e.t).slice(11), e.k,
       e.k === 'feed' ? (SIDE_LABEL[e.side] || '') : '',
-      e.k === 'feed' ? (e.min || '') : '',
-      e.k === 'feed' ? (e.oz || '') : '',
+      TIMED.includes(e.k) ? (e.min || '') : '',
+      TIMED.includes(e.k) ? (e.oz || '') : '',
       e.note || '', e.by || '',
     ]);
   }
@@ -222,8 +282,7 @@ export function installSteps(url) {
     `Open this link in Safari: ${url}`,
     'Tap the Share button (the square with the arrow pointing up). If you don\'t see it, tap the three dots first.',
     'Scroll down, tap "Add to Home Screen", then tap "Add".',
-    'Open "Jubilee" from your Home Screen, not from Safari.',
-    'To share one log between phones: tap the gear, paste the setup link you were sent into "Sync key or setup link", then tap "Save settings".',
+    'Open "Jubilee" from your Home Screen, not from Safari. It walks you through the rest.',
   ];
 }
 
@@ -239,8 +298,8 @@ export function clean(e) {
   const out = { id: e.id, k: e.k, t: e.t, u: Number.isFinite(e.u) ? e.u : 0 };
   if (typeof e.by === 'string' && e.by) out.by = e.by.slice(0, 40);
   if (e.x) out.x = true;
-  if (e.k === 'feed') {
-    if (e.side in SIDE_LABEL) out.side = e.side;
+  if (e.k === 'feed' && e.side in SIDE_LABEL) out.side = e.side;
+  if (TIMED.includes(e.k)) {
     if (Number.isFinite(e.min) && e.min > 0) out.min = Math.min(Math.round(e.min), 600);
     if (Number.isFinite(e.oz) && e.oz > 0) out.oz = Math.min(Math.round(e.oz * 100) / 100, 99);
   }

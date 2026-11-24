@@ -44,6 +44,15 @@
     <path d="M20.500 36q3.500 3 7 0" fill="none" stroke="#5A3B2A" stroke-width="1.700" stroke-linecap="round"/>
     <circle cx="14.500" cy="34.500" r="1.900" fill="#F7A8C4" opacity=".85"/><circle cx="33.500" cy="34.500" r="1.900" fill="#F7A8C4" opacity=".85"/>
   </symbol>
+  <symbol id="i-pump" viewBox="0 0 48 48">
+    <path d="M13 6h22l-6.500 9.500h-9z" fill="#CDEFE0" stroke="#5FB894" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="18.500" y="14.500" width="11" height="5" rx="2" fill="#5FB894"/>
+    <rect x="13" y="19" width="22" height="24" rx="8" fill="#FFFFFF" stroke="#5FB894" stroke-width="2"/>
+    <path d="M14.500 30h19v5a6.500 6.500 0 0 1-6.500 6.500h-6a6.500 6.500 0 0 1-6.500-6.500z" fill="#DDF5EA"/>
+    <circle cx="20.500" cy="32.500" r="1.500" fill="#6B3A55"/><circle cx="27.500" cy="32.500" r="1.500" fill="#6B3A55"/>
+    <path d="M21.500 36q2.500 2.300 5 0" fill="none" stroke="#6B3A55" stroke-width="1.500" stroke-linecap="round"/>
+    <circle cx="18" cy="35.500" r="1.600" fill="#F7A8C4" opacity=".8"/><circle cx="30" cy="35.500" r="1.600" fill="#F7A8C4" opacity=".8"/>
+  </symbol>
   <symbol id="i-flower" viewBox="0 0 48 48">
     <g fill="currentColor">
       <circle cx="24" cy="12" r="8"/><circle cx="35.400" cy="20.300" r="8"/><circle cx="31" cy="33.700" r="8"/>
@@ -89,7 +98,7 @@
     <svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>
     <div class="nudge-body">
       <p class="nudge-title">Put Jubilee on your Home Screen</p>
-      <p class="nudge-text" id="nudgeText">It opens like a real app, one tap from your Home Screen.</p>
+      <p class="nudge-text" id="nudgeText">It opens like a real app, one tap from your Home Screen. Four quick steps, with pictures.</p>
       <div class="nudge-actions">
         <button type="button" class="btn btn-primary" id="nudgeShow">Show me how</button>
         <button type="button" class="link-btn" id="nudgeHide">Not now</button>
@@ -97,7 +106,28 @@
     </div>
   </div>
 
-  <section class="since" aria-label="Time since the last feed, pee and poop">
+  <!-- On a connected phone, until the other phone has logged something. -->
+  <div class="nudge" id="invite" hidden>
+    <svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>
+    <div class="nudge-body">
+      <p class="nudge-title" id="inviteTitle">Share Jubilee with the other phone</p>
+      <p class="nudge-text">One tap sends a link. Their phone walks them through the rest, so there is nothing to explain.</p>
+      <div class="nudge-actions">
+        <button type="button" class="btn btn-primary" id="inviteSend">Send the invite</button>
+        <button type="button" class="link-btn" id="inviteHide">Not now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- A feed or pump that is still going. One tap on Done saves how long it took. -->
+  <div class="running" id="running" hidden>
+    <svg class="art" aria-hidden="true"><use id="runningArt" href="#i-feed"/></svg>
+    <p class="running-text"><strong id="runningWhat">Feeding</strong><span id="runningTime">1 min</span></p>
+    <button type="button" class="btn btn-primary" id="runningDone">Done feeding</button>
+    <button type="button" class="link-btn" id="runningStop">Don't time it</button>
+  </div>
+
+  <section class="since" aria-label="Time since the last feed, pee, poop and pump">
     <div class="since-item" data-kind="feed">
       <svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>
       <h2 class="eyebrow">Last feed</h2>
@@ -115,6 +145,12 @@
       <h2 class="eyebrow">Last poop</h2>
       <p class="since-value" id="sincePoop">&ndash;</p>
       <p class="since-sub" id="sincePoopSub">None yet</p>
+    </div>
+    <div class="since-item" data-kind="pump">
+      <svg class="art" aria-hidden="true"><use href="#i-pump"/></svg>
+      <h2 class="eyebrow">Last pump</h2>
+      <p class="since-value" id="sincePump">&ndash;</p>
+      <p class="since-sub" id="sincePumpSub">None yet</p>
     </div>
   </section>
 
@@ -157,6 +193,20 @@
       <button type="button" class="chip" data-side="bottle" aria-pressed="false">Bottle</button>
     </div>
   </div>
+  <div id="trayAmount" hidden>
+    <p class="eyebrow tray-label" id="trayAmountLabel">How much</p>
+    <div class="chips" role="group" aria-labelledby="trayAmountLabel">
+      <button type="button" class="chip" data-oz="1" aria-pressed="false">1 oz</button>
+      <button type="button" class="chip" data-oz="2" aria-pressed="false">2 oz</button>
+      <button type="button" class="chip" data-oz="3" aria-pressed="false">3 oz</button>
+      <button type="button" class="chip" data-oz="4" aria-pressed="false">4 oz</button>
+    </div>
+    <div class="stepper">
+      <button type="button" class="chip" data-step="-0.5" aria-label="Half an ounce less">&minus; &frac12;</button>
+      <p class="stepper-value" id="trayOz" aria-live="polite">Not set</p>
+      <button type="button" class="chip" data-step="0.5" aria-label="Half an ounce more">+ &frac12;</button>
+    </div>
+  </div>
   <p class="eyebrow tray-label">Happened earlier? Tap how long ago</p>
   <div class="chips" id="trayWhen" role="group" aria-label="How long ago did it happen">
     <button type="button" class="chip" data-back="0" aria-pressed="true">Just now</button>
@@ -166,7 +216,7 @@
   </div>
   <div class="tray-foot">
     <button type="button" class="link-btn" id="trayMore">Add a note or exact time</button>
-    <button type="button" class="link-btn" id="trayDone">Done</button>
+    <button type="button" class="link-btn" id="trayDone">Close</button>
   </div>
 </aside>
 
@@ -183,17 +233,22 @@
     <svg class="art" aria-hidden="true"><use href="#i-poop"/></svg>
     <span class="act-label">Poop</span>
   </button>
+  <button type="button" class="act" data-log="pump">
+    <svg class="art" aria-hidden="true"><use href="#i-pump"/></svg>
+    <span class="act-label">Pump</span>
+  </button>
 </nav>
 
 <dialog class="sheet" id="editSheet" aria-labelledby="editTitle">
   <form method="dialog" id="editForm" novalidate>
     <h2 class="sheet-title" id="editTitle" tabindex="-1" autofocus>Edit entry</h2>
 
-    <fieldset class="seg">
+    <fieldset class="seg seg-4">
       <legend class="eyebrow">What was it</legend>
       <label><input type="radio" name="kind" value="feed"><span>Feed</span></label>
       <label><input type="radio" name="kind" value="pee"><span>Pee</span></label>
       <label><input type="radio" name="kind" value="poop"><span>Poop</span></label>
+      <label><input type="radio" name="kind" value="pump"><span>Pump</span></label>
     </fieldset>
 
     <label class="field">
@@ -203,7 +258,7 @@
     </label>
 
     <div id="feedFields">
-      <fieldset class="seg seg-4">
+      <fieldset class="seg seg-4" id="editSide">
         <legend class="eyebrow">Started on (optional)</legend>
         <label><input type="checkbox" name="side" value="L"><span>Left</span></label>
         <label><input type="checkbox" name="side" value="R"><span>Right</span></label>
@@ -212,7 +267,7 @@
       </fieldset>
       <div class="field-row">
         <label class="field">
-          <span class="eyebrow">Minutes (optional)</span>
+          <span class="eyebrow">How long, minutes (optional)</span>
           <input type="number" id="editMin" name="minutes" autocomplete="off" inputmode="numeric" min="0" max="600" step="1">
         </label>
         <label class="field">
@@ -239,39 +294,132 @@
   <form method="dialog" id="settingsForm" novalidate>
     <h2 class="sheet-title" id="settingsTitle" tabindex="-1" autofocus>Settings</h2>
 
+    <fieldset class="seg">
+      <legend class="eyebrow">Whose phone is this</legend>
+      <label><input type="radio" name="who" value="mom"><span>Mom</span></label>
+      <label><input type="radio" name="who" value="dad"><span>Dad</span></label>
+      <label><input type="radio" name="who" value="other"><span>Other</span></label>
+    </fieldset>
+    <label class="field" id="setMeField" hidden>
+      <span class="eyebrow">Your name</span>
+      <input type="text" id="setMe" name="logger" maxlength="40" autocomplete="off" placeholder="Grandma, Auntie…">
+      <span class="field-help">Shown next to what you log, so everyone can tell who logged what.</span>
+    </label>
+    <fieldset class="seg seg-2">
+      <legend class="eyebrow">A feed on this phone is usually</legend>
+      <label><input type="radio" name="feedkind" value="breast"><span>Breast</span></label>
+      <label><input type="radio" name="feedkind" value="bottle"><span>Bottle</span></label>
+      <p class="field-help seg-help">Only the starting choice. Left, Right and Bottle are always there on every feed.</p>
+    </fieldset>
     <label class="field">
       <span class="eyebrow">Baby's name</span>
       <input type="text" id="setBaby" name="baby" maxlength="40" autocomplete="off">
     </label>
-    <label class="field">
-      <span class="eyebrow">Your name on this phone</span>
-      <input type="text" id="setMe" name="logger" maxlength="40" autocomplete="off" placeholder="Dad, Mom, Grandma…">
-      <span class="field-help">Shown next to what you log, so you can tell who logged what.</span>
-    </label>
 
     <h3 class="sheet-sub">Sharing between phones</h3>
     <p class="sheet-status" id="setStatus"></p>
-    <label class="field">
-      <span class="eyebrow">Sync key or setup link</span>
-      <input type="text" id="setToken" name="synckey" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-      <span class="field-help"><strong>Were you texted a setup link?</strong> Press and hold it in the text, tap Copy, then press and hold this box and tap Paste. Then tap Save settings. That's all.</span>
-      <span class="field-help">Setting up the very first phone? Paste the GitHub key here instead.</span>
-      <span class="field-error" id="setTokenError" hidden></span>
-    </label>
-    <label class="field">
-      <span class="eyebrow">Private log location</span>
-      <input type="text" id="setRepo" name="logrepo" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <span class="field-help">Leave this as it is.</span>
-    </label>
+    <button type="button" class="btn btn-primary" id="setShare" hidden>Invite another phone</button>
+    <details class="adv" id="setAdv">
+      <summary>Connect by hand</summary>
+      <p class="field-help">You should not need this. The invite link does it for you.</p>
+      <label class="field">
+        <span class="eyebrow">Sync key or setup link</span>
+        <input type="text" id="setToken" name="synckey" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <span class="field-help">Paste the invite link you were texted, or the GitHub key if this is the very first phone.</span>
+        <span class="field-error" id="setTokenError" hidden></span>
+      </label>
+      <label class="field">
+        <span class="eyebrow">Private log location</span>
+        <input type="text" id="setRepo" name="logrepo" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <span class="field-help">Leave this as it is.</span>
+      </label>
+    </details>
 
     <div class="sheet-actions">
       <button type="submit" class="btn btn-primary" id="setSave">Save settings</button>
       <button type="button" class="btn" id="setCancel">Cancel</button>
     </div>
-    <button type="button" class="btn" id="setShare" hidden>Send setup link to the other phone</button>
     <button type="button" class="btn" id="setExport">Download the log as a spreadsheet</button>
     <button type="button" class="btn" id="setHelp">How this works</button>
   </form>
+</dialog>
+
+<!-- The first-run guide. One screen at a time; app.js decides which this phone needs (core.firstScreen). -->
+<dialog class="sheet guide" id="guide" aria-label="Getting started">
+  <section class="guide-step" data-step="hello" hidden>
+    <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
+    <h2 class="sheet-title" tabindex="-1">Welcome to Jubilee</h2>
+    <p class="welcome-lead">One tap logs a feed or a diaper, and you both see it. Let's put it on your phone. It takes about a minute.</p>
+    <button type="button" class="btn btn-primary btn-big" id="guideGo">Let's go</button>
+    <button type="button" class="link-btn guide-skip" data-guide="later">Not now, just let me look</button>
+  </section>
+
+  <section class="guide-step" data-step="install" hidden>
+    <p class="guide-count">Step 1 of 2</p>
+    <h2 class="sheet-title" tabindex="-1">Put Jubilee on your Home Screen</h2>
+    <ol class="guide-list">
+      <li>
+        <span class="guide-pic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3.500M8 7l4-4 4 4M7.500 10.500H6a1.500 1.500 0 0 0-1.500 1.500v7.500A1.500 1.500 0 0 0 6 21h12a1.500 1.500 0 0 0 1.500-1.500V12a1.500 1.500 0 0 0-1.500-1.500h-1.500"/></svg></span>
+        <span><strong>Tap the Share button.</strong> It's the square with an arrow pointing up, at the bottom of your screen. Can't see it? Tap the three dots first.</span>
+      </li>
+      <li>
+        <span class="guide-pic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.500" y="3.500" width="17" height="17" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>
+        <span><strong>Tap "Add to Home Screen".</strong> You may need to scroll down the list to find it.</span>
+      </li>
+      <li>
+        <span class="guide-pic guide-pic-word" aria-hidden="true">Add</span>
+        <span><strong>Tap "Add"</strong> in the top corner.</span>
+      </li>
+      <li>
+        <span class="guide-pic guide-pic-icon" aria-hidden="true"><img src="bloom-180.png" alt="" width="48" height="48"></span>
+        <span><strong>Open Jubilee from your Home Screen.</strong> Look for this picture. <span id="guideCarry">It walks you through the rest.</span></span>
+      </li>
+    </ol>
+    <p class="guide-point">The Share button is down at the bottom <span class="guide-arrow" aria-hidden="true">&darr;</span></p>
+    <button type="button" class="link-btn guide-skip" data-guide="later">Not now, just let me look</button>
+  </section>
+
+  <section class="guide-step" data-step="connect" hidden>
+    <svg class="art welcome-art guide-flower" aria-hidden="true"><use href="#i-flower"/></svg>
+    <p class="guide-count">Step 2 of 2</p>
+    <h2 class="sheet-title" tabindex="-1">Connect to your family's log</h2>
+    <p class="welcome-lead">One tap, so you both see the same feeds and diapers.</p>
+    <button type="button" class="btn btn-primary btn-big" id="guideConnect">Connect</button>
+    <p class="guide-note">If your phone asks, tap <strong>Paste</strong>.</p>
+    <div class="guide-help" id="guideConnectHelp" hidden>
+      <p><strong>That didn't find it yet.</strong> An easy fix:</p>
+      <ol>
+        <li>Open the text message with the Jubilee link.</li>
+        <li>Press and hold the link, then tap <strong>Copy</strong>.</li>
+        <li>Come back here and tap <strong>Connect</strong> again.</li>
+      </ol>
+      <label class="field">
+        <span class="eyebrow">Or paste the link here</span>
+        <input type="text" id="guidePaste" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <span class="field-error" id="guidePasteError" hidden>That is not a Jubilee link. Ask for a fresh invite.</span>
+      </label>
+      <button type="button" class="btn" id="guidePasteGo">Use this link</button>
+    </div>
+    <button type="button" class="link-btn guide-skip" data-guide="skip-connect">Skip, use this phone on its own</button>
+  </section>
+
+  <section class="guide-step" data-step="who" hidden>
+    <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
+    <h2 class="sheet-title" tabindex="-1">Whose phone is this?</h2>
+    <p class="welcome-lead">So you can both see who logged what.</p>
+    <div class="guide-who">
+      <button type="button" class="btn btn-big" data-who="mom">Mom</button>
+      <button type="button" class="btn btn-big" data-who="dad">Dad</button>
+    </div>
+    <button type="button" class="link-btn guide-skip" id="guideWhoOther">Someone else</button>
+    <div id="guideOther" hidden>
+      <label class="field">
+        <span class="eyebrow">Your name</span>
+        <input type="text" id="guideName" maxlength="40" autocomplete="off" placeholder="Grandma, Auntie…">
+      </label>
+      <button type="button" class="btn btn-primary" id="guideNameGo">That's me</button>
+    </div>
+  </section>
 </dialog>
 
 <!-- First open only. -->
@@ -281,6 +429,7 @@
   <p class="welcome-lead">Keeping track is one tap. Here's all there is to it.</p>
   <ul class="tips">
     <li><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg><span><strong>Tap Feed, Pee or Poop</strong> the moment it happens. It's saved with the time. Nothing else to fill in.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>After a Feed, tap Left or Right</strong> for the side it started on. Jubilee then tells you which side is next.</span></li>
     <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>Forgot one?</strong> Tap it now, then tap 15 min, 30 min or 1 hour.</span></li>
     <li><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg><span><strong>Made a mistake?</strong> Tap Undo, or tap any entry to fix or delete it.</span></li>
   </ul>
@@ -336,15 +485,8 @@
       <li><strong>Syncing</strong>: sending right now.</li>
       <li><strong>Not synced</strong>: usually no signal. Your entries are safe and it keeps trying. Tap it to try again.</li>
     </ul>
-    <p><strong>To join a log someone shared with you:</strong></p>
-    <ol>
-      <li>Put this app on your Home Screen first (steps below), and open it from there.</li>
-      <li>In the text you were sent, press and hold the setup link and tap <strong>Copy</strong>.</li>
-      <li>In this app, tap the gear at the top.</li>
-      <li>Press and hold the box under <strong>Sync key or setup link</strong>, tap <strong>Paste</strong>.</li>
-      <li>Tap <strong>Save settings</strong>. The top now says <strong>Shared</strong>.</li>
-    </ol>
-    <p><strong>To invite another phone:</strong> tap the gear, then <strong>Send setup link to the other phone</strong>.</p>
+    <p><strong>To invite another phone:</strong> tap the gear, then <strong>Invite another phone</strong>, and text the link. That's all you do.</p>
+    <p><strong>Were you sent an invite?</strong> Tap the link in the text. Jubilee walks you through the rest, one step at a time.</p>
   </section>
 
   <section class="help-card">
@@ -358,7 +500,7 @@
     <ul>
       <li><strong>No signal?</strong> It still works. Entries wait on your phone and send themselves later.</li>
       <li><strong>Doctor wants numbers?</strong> Tap the gear, then <strong>Download the log as a spreadsheet</strong>.</li>
-      <li><strong>Add your name</strong> in the gear so you can tell who logged what.</li>
+      <li><strong>Mom or Dad?</strong> The gear is where you change whose phone this is.</li>
     </ul>
   </section>
 

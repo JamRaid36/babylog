@@ -16,7 +16,8 @@ const store = {
   },
 };
 
-let cfg = { me: '', baby: '', token: '', repo: DEFAULT_REPO, ...store.get('bl.cfg', {}) };
+// role: 'mom' | 'dad' | 'other' | '' (not asked yet).  feed: what a Feed tap means here, 'breast' | 'bottle'.
+let cfg = { me: '', role: '', feed: '', baby: '', token: '', repo: DEFAULT_REPO, ...store.get('bl.cfg', {}) };
 const state = {
   events: store.get('bl.events', {}), // id -> event
   dirty: store.get('bl.dirty', {}),   // day -> stamp: days with changes not yet sent
@@ -40,7 +41,7 @@ function seedDemo() {
     ['pee', 400, {}, 'Dad'], ['poop', 610, {}, 'Mom'], ['feed', 640, { side: 'B', min: 25 }, 'Mom'],
     ['pee', 880, {}, 'Dad'], ['feed', 900, { side: 'L' }, 'Mom'], ['feed', 1500, { side: 'R', min: 10 }, 'Mom'], ['poop', 1560, {}, 'Dad'],
   ];
-  cfg = { ...cfg, baby: 'Baby', me: 'Dad', token: '' };
+  cfg = { ...cfg, baby: 'Baby', me: 'Dad', role: 'other', feed: 'breast', token: '' };
   for (const [k, back, extra, by] of rows) {
     const t = now - back * m;
     const id = C.newId(t);
@@ -61,14 +62,15 @@ function put(e) {
 }
 
 function logNow(kind) {
-  const e = put({ id: C.newId(), k: kind, t: Date.now(), by: cfg.me });
+  const e = put({ id: C.newId(), k: kind, t: Date.now(), by: cfg.me, ...(kind === 'feed' ? C.feedDefaults(cfg) : {}) });
   if (!e) return;
+  store.set('bl.untimed', '');
   flashButton(kind);
   openTray(e.id);
 }
 
 // ── Screen ──────────────────────────────────────────────────────────────────────────────────────
-const SINCE = { feed: ['#sinceFeed', '#sinceFeedSub'], pee: ['#sincePee', '#sincePeeSub'], poop: ['#sincePoop', '#sincePoopSub'] };
+const SINCE = { feed: ['#sinceFeed', '#sinceFeedSub'], pee: ['#sincePee', '#sincePeeSub'], poop: ['#sincePoop', '#sincePoopSub'], pump: ['#sincePump', '#sincePumpSub'] };
 
 function renderSince() {
   const now = Date.now();
@@ -77,10 +79,13 @@ function renderSince() {
     const [valueSel, subSel] = SINCE[kind];
     const e = s.last[kind];
     $(valueSel).textContent = e ? C.ago(Math.max(0, now - e.t)) : '–';
-    const extra = e && kind === 'feed' && e.side ? ` · ${C.SIDE_LABEL[e.side]}` : '';
+    let extra = '';
+    if (e && kind === 'feed' && e.side) extra = ` · ${C.SIDE_LABEL[e.side]}`;
+    if (e && kind === 'pump' && e.oz > 0) extra = ` · ${e.oz} oz`;
     $(subSel).textContent = e ? `${C.clock(e.t)}${extra}` : 'None yet';
   }
   $('#tally').textContent = C.tally(s.day);
+  renderRunning(now);
   const side = C.nextSide(Object.values(state.events), now);
   const line = $('#nextSide');
   line.hidden = !side;
@@ -92,6 +97,34 @@ function renderSince() {
     );
   }
 }
+
+// The feed or pump still going, with its one Done button. "Don't time it" is remembered per entry.
+const RUNNING_WORD = { feed: 'Feeding', pump: 'Pumping' };
+function runningNow(now = Date.now()) {
+  const e = C.running(Object.values(state.events), now);
+  return e && store.get('bl.untimed', '') !== e.id ? e : null;
+}
+function renderRunning(now = Date.now()) {
+  const e = runningNow(now);
+  $('#running').hidden = !e;
+  if (!e) return;
+  $('#runningArt').setAttribute('href', `#i-${e.k}`);
+  $('#runningWhat').textContent = RUNNING_WORD[e.k];
+  $('#runningDone').textContent = `Done ${RUNNING_WORD[e.k].toLowerCase()}`;
+  $('#runningTime').textContent = `${C.minutesSince(e.t, now)} min so far · started ${C.clock(e.t)}`;
+}
+$('#runningDone').addEventListener('click', () => {
+  const e = runningNow();
+  if (!e) return;
+  const min = C.minutesSince(e.t);
+  put({ ...e, min });
+  toast(`${C.KIND_LABEL[e.k]} saved as ${min} min.`, 'Undo', () => put({ ...state.events[e.id], min: undefined }));
+});
+$('#runningStop').addEventListener('click', () => {
+  const e = runningNow();
+  if (e) store.set('bl.untimed', e.id);
+  renderRunning();
+});
 
 function el(tag, cls, text) {
   const n = document.createElement(tag);
@@ -177,8 +210,18 @@ function renderHeader() {
   }
 }
 
+// "Share with the other phone": there on a connected phone until someone else has logged something.
+function renderInvite() {
+  const show = FORCE === 'invite'
+    || (!!cfg.token && !DEMO && !store.get('bl.hideInvite', false) && !C.othersHaveLogged(Object.values(state.events), cfg.me));
+  $('#invite').hidden = !show;
+  const other = C.ROLES[cfg.role]?.other;
+  $('#inviteTitle').textContent = `Share Jubilee with ${other || 'the other phone'}`;
+}
+
 function render() {
   renderHeader();
+  renderInvite();
   renderSince();
   renderLog();
 }
@@ -216,10 +259,10 @@ function openTray(id) {
   hideToast();
   trayId = id;
   trayBase = e.t;
-  $('#traySide').hidden = e.k !== 'feed';
   paintTray();
   $('#tray').hidden = false;
-  armTray(e.k === 'feed' ? 30000 : 9000); // a feed waits longer: the side is worth the one tap
+  // a question worth its one tap (which side, how much) keeps the tray up longer
+  armTray((e.k === 'feed' && !e.side) || C.hasAmount(e) ? 30000 : 9000);
 }
 function armTray(ms) { clearTimeout(trayTimer); trayTimer = setTimeout(closeTray, ms); }
 function closeTray() { clearTimeout(trayTimer); trayId = null; $('#tray').hidden = true; }
@@ -230,7 +273,13 @@ function paintTray() {
   $('#trayTitle').textContent = `${C.KIND_LABEL[e.k]} saved · ${C.clock(e.t)}`;
   const back = Math.round((trayBase - e.t) / 60e3);
   for (const chip of document.querySelectorAll('#trayWhen .chip')) chip.setAttribute('aria-pressed', String(Number(chip.dataset.back) === back));
+  $('#traySide').hidden = e.k !== 'feed';
   for (const chip of document.querySelectorAll('#traySide .chip')) chip.setAttribute('aria-pressed', String(chip.dataset.side === e.side));
+  // "How much" only where it means something: a pump, or a bottle feed
+  $('#trayAmount').hidden = !C.hasAmount(e);
+  $('#trayAmountLabel').textContent = e.k === 'pump' ? 'How much did you get' : 'How much did she drink';
+  for (const chip of document.querySelectorAll('#trayAmount .chip[data-oz]')) chip.setAttribute('aria-pressed', String(Number(chip.dataset.oz) === e.oz));
+  $('#trayOz').textContent = e.oz > 0 ? `${e.oz} oz` : 'Not set';
   return undefined;
 }
 
@@ -239,9 +288,13 @@ $('#tray').addEventListener('click', (ev) => {
   const e = state.events[trayId];
   if (!chip || !e) return;
   if (chip.dataset.back !== undefined) put({ ...e, t: trayBase - Number(chip.dataset.back) * 60e3 });
-  else if (chip.dataset.side) put({ ...e, side: e.side === chip.dataset.side ? undefined : chip.dataset.side });
+  else if (chip.dataset.side) {
+    const side = e.side === chip.dataset.side ? undefined : chip.dataset.side;
+    put({ ...e, side, oz: side === 'bottle' ? e.oz : undefined }); // ounces belong to a bottle
+  } else if (chip.dataset.oz) put({ ...e, oz: e.oz === Number(chip.dataset.oz) ? undefined : Number(chip.dataset.oz) });
+  else if (chip.dataset.step) put({ ...e, oz: C.stepOz(e.oz, Number(chip.dataset.step)) || undefined });
   paintTray();
-  armTray(9000);
+  armTray(12000);
 });
 $('#trayUndo').addEventListener('click', () => {
   const e = state.events[trayId];
@@ -263,7 +316,9 @@ function setSideBoxes(side) {
   for (const box of document.querySelectorAll('#editForm input[name="side"]')) box.checked = box.value === side;
 }
 function showFeedFields() {
-  $('#feedFields').hidden = $('#editForm').elements.kind.value !== 'feed';
+  const kind = $('#editForm').elements.kind.value;
+  $('#feedFields').hidden = kind !== 'feed' && kind !== 'pump';
+  $('#editSide').hidden = kind !== 'feed';
 }
 
 function openEdit(id) {
@@ -305,8 +360,8 @@ $('#editForm').addEventListener('submit', (ev) => {
   put({
     id: e.id, by: e.by, k: kind, t,
     side: kind === 'feed' && side ? side.value : undefined,
-    min: kind === 'feed' ? Number($('#editMin').value) : undefined,
-    oz: kind === 'feed' ? Number($('#editOz').value) : undefined,
+    min: kind === 'feed' || kind === 'pump' ? Number($('#editMin').value) : undefined,
+    oz: kind === 'feed' || kind === 'pump' ? Number($('#editOz').value) : undefined,
     note: $('#editNote').value,
   });
   editSheet.close();
@@ -348,17 +403,31 @@ $('#log').addEventListener('click', (ev) => {
 const settingsSheet = $('#settingsSheet');
 
 function openSettings() {
+  const form = $('#settingsForm');
   $('#setBaby').value = cfg.baby;
-  $('#setMe').value = cfg.me;
+  $('#setMe').value = cfg.role === 'other' || !cfg.role ? cfg.me : '';
+  for (const r of form.elements.who) r.checked = r.value === cfg.role;
+  for (const r of form.elements.feedkind) r.checked = r.value === (cfg.feed || 'breast');
+  $('#setMeField').hidden = cfg.role !== 'other';
   $('#setToken').value = cfg.token;
   $('#setRepo').value = cfg.repo;
   $('#setTokenError').hidden = true;
+  $('#setAdv').open = false;
   $('#setShare').hidden = !cfg.token;
   $('#setStatus').textContent = cfg.token
     ? `Sharing is on. ${syncInfo.state === 'error' ? syncInfo.detail || syncInfo.text : 'Both phones see the same log.'}`
-    : 'Sharing is off. Entries stay on this phone until a sync key is added.';
+    : 'Sharing is off. Entries stay on this phone. To join a shared log, tap the invite link you were texted.';
   settingsSheet.showModal();
 }
+
+// Picking Mom or Dad sets the usual kind of feed with it; either can still be changed below.
+$('#settingsForm').addEventListener('change', (ev) => {
+  if (ev.target.name !== 'who') return;
+  const form = $('#settingsForm');
+  $('#setMeField').hidden = ev.target.value !== 'other';
+  const usual = C.ROLES[ev.target.value]?.feed;
+  if (usual) for (const r of form.elements.feedkind) r.checked = r.value === usual;
+});
 
 $('#settingsForm').addEventListener('submit', (ev) => {
   ev.preventDefault();
@@ -367,6 +436,7 @@ $('#settingsForm').addEventListener('submit', (ev) => {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) {
     err.textContent = 'The log location should look like owner/name, for example JamRaid36/babylog-data.';
     err.hidden = false;
+    $('#setAdv').open = true;
     $('#setRepo').focus();
     return;
   }
@@ -378,6 +448,7 @@ $('#settingsForm').addEventListener('submit', (ev) => {
     if (!setup) {
       err.textContent = 'That setup link is not readable. Ask the other phone to send a fresh one.';
       err.hidden = false;
+      $('#setAdv').open = true;
       $('#setToken').focus();
       return;
     }
@@ -385,8 +456,12 @@ $('#settingsForm').addEventListener('submit', (ev) => {
   }
   if (linkRepo) repo = linkRepo;
   const sharingChanged = token !== cfg.token || repo !== cfg.repo;
-  cfg = { ...cfg, baby: $('#setBaby').value.trim() || linkBaby, me: $('#setMe').value.trim(), token, repo };
+  const form = $('#settingsForm');
+  const role = form.elements.who.value || cfg.role;
+  const me = C.ROLES[role] ? C.ROLES[role].me : $('#setMe').value.trim();
+  cfg = { ...cfg, baby: $('#setBaby').value.trim() || linkBaby, role, me, feed: form.elements.feedkind.value || cfg.feed, token, repo };
   store.set('bl.cfg', cfg);
+  keepSetupInAddress();
   if (sharingChanged) {
     // a different log: forget the file versions and offer everything on this phone to it
     state.shas = {};
@@ -401,15 +476,26 @@ $('#settingsForm').addEventListener('submit', (ev) => {
 });
 $('#setCancel').addEventListener('click', () => settingsSheet.close());
 
-$('#setShare').addEventListener('click', async () => {
-  const link = `${location.origin}${location.pathname}#s=${C.encodeSetup({ t: cfg.token, r: cfg.repo, b: cfg.baby })}`;
+// The invite: one link that carries the shared log's settings after the #, so the other phone sets itself up.
+function inviteLink() {
+  return `${APP_URL}#s=${C.encodeSetup({ t: cfg.token, r: cfg.repo, b: cfg.baby })}`;
+}
+async function sendInvite() {
+  const link = inviteLink();
   try {
-    if (navigator.share) await navigator.share({ title: 'Jubilee setup', text: 'Open this once to share the baby log:', url: link });
-    else { await navigator.clipboard.writeText(link); toast('Setup link copied. Send it to the other phone.'); }
+    if (navigator.share) {
+      await navigator.share({ title: 'Jubilee', text: 'Tap this to set up Jubilee, our baby log. It walks you through it.', url: link });
+    } else {
+      const ok = await copyText(link);
+      toast(ok ? 'Invite link copied. Text it to the other phone.' : 'Could not copy the link from this browser.');
+    }
   } catch (err) {
     if (err && err.name !== 'AbortError') toast('Could not share the link from this browser.');
   }
-});
+}
+$('#setShare').addEventListener('click', sendInvite);
+$('#inviteSend').addEventListener('click', sendInvite);
+$('#inviteHide').addEventListener('click', () => { store.set('bl.hideInvite', true); $('#invite').hidden = true; });
 
 $('#setExport').addEventListener('click', () => {
   const blob = new Blob([C.toCsv(Object.values(state.events))], { type: 'text/csv' });
@@ -463,9 +549,10 @@ function showInstallSteps() {
 // ── Welcome, help, and the Home Screen nudge ───────────────────────────────────────────────────
 const helpSheet = $('#helpSheet');
 const welcomeSheet = $('#welcomeSheet');
-const IS_IPHONE = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const ON_HOME_SCREEN = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-const FORCE = new URLSearchParams(location.search).get('show'); // ?show=nudge, for checks and screenshots
+const FORCE = new URLSearchParams(location.search).get('show'); // ?show=nudge | invite | guide-<step>, for checks and screenshots
+const AS = new URLSearchParams(location.search).get('as');      // ?as=safari | home: behave like an iPhone in Safari / on the Home Screen, for checks
+const IS_IPHONE = AS ? true : /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const ON_HOME_SCREEN = AS ? AS === 'home' : navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
 
 function openHelp() {
   for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
@@ -482,14 +569,114 @@ $('#welcomeOk').addEventListener('click', closeWelcome);
 $('#welcomeMore').addEventListener('click', () => { closeWelcome(); openHelp(); });
 welcomeSheet.addEventListener('close', () => store.set('bl.seenWelcome', true));
 
+// The small reminder left behind when someone said "not now" to putting it on the Home Screen.
 function renderNudge() {
-  const show = FORCE === 'nudge' || (IS_IPHONE && !ON_HOME_SCREEN && !DEMO && !store.get('bl.hideNudge', false));
+  const show = FORCE === 'nudge' || (IS_IPHONE && !ON_HOME_SCREEN && !DEMO && !store.get('bl.hideNudge', false) && !guide.open);
   $('#nudge').hidden = !show;
-  if (show && cfg.token) {
-    $('#nudgeText').textContent = 'Sharing is on here in Safari. The Home Screen app keeps its own settings, so after you add it, paste the same setup link in its Settings too.';
-  }
 }
-$('#nudgeShow').addEventListener('click', showInstallSteps);
+$('#nudgeShow').addEventListener('click', () => (IS_IPHONE ? showGuide('install') : showInstallSteps()));
+
+// ── The first-run guide: one screen at a time, nothing to read up on beforehand ───────────────
+const guide = $('#guide');
+
+function showGuide(step) {
+  for (const s of guide.querySelectorAll('.guide-step')) s.hidden = s.dataset.step !== step;
+  $('#guideCarry').textContent = cfg.token ? 'Your shared log comes along with it.' : 'It walks you through the rest.';
+  if (!guide.open) {
+    for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+    guide.showModal();
+  }
+  guide.scrollTop = 0;
+  guide.querySelector(`.guide-step[data-step="${step}"] .sheet-title`).focus();
+  $('#nudge').hidden = true;
+}
+
+// Show whichever screen this phone still needs; when it needs none, the three tips, once.
+function nextGuide() {
+  const step = C.firstScreen({
+    iphone: IS_IPHONE, standalone: ON_HOME_SCREEN, hasToken: !!cfg.token, hasRole: !!cfg.role,
+    later: store.get('bl.later', false), skippedConnect: store.get('bl.skipConnect', false),
+  });
+  if (step) { showGuide(step === 'install' ? 'hello' : step); return; }
+  if (guide.open) guide.close();
+  renderNudge();
+  if (!store.get('bl.seenWelcome', false)) welcomeSheet.showModal();
+}
+
+// Safari on an iPhone: "Add to Home Screen" saves the address as it is right now. Keeping the shared
+// log's settings after the # means the Home Screen app opens already connected, with nothing to paste.
+function keepSetupInAddress() {
+  if (!IS_IPHONE || ON_HOME_SCREEN || DEMO || !cfg.token) return;
+  history.replaceState(null, '', `${location.pathname}${location.search}#s=${C.encodeSetup({ t: cfg.token, r: cfg.repo, b: cfg.baby })}`);
+}
+
+// Connect this phone to a shared log.
+function applySetup(setup) {
+  cfg = { ...cfg, token: setup.t, repo: setup.r, baby: cfg.baby || setup.b };
+  store.set('bl.cfg', cfg);
+  state.shas = {};
+  for (const e of Object.values(state.events)) state.dirty[C.bucketOf(e.id)] = Date.now();
+  persist();
+  keepSetupInAddress();
+  setSync('syncing');
+  render();
+  queueSync(0);
+}
+
+$('#guideGo').addEventListener('click', () => {
+  // A spare way across, in case the address does not carry the settings: the invite waits on the clipboard.
+  if (cfg.token) copyText(inviteLink());
+  showGuide('install');
+});
+
+guide.addEventListener('click', (ev) => {
+  const skip = ev.target.closest('[data-guide]');
+  if (skip) {
+    store.set(skip.dataset.guide === 'later' ? 'bl.later' : 'bl.skipConnect', true);
+    nextGuide();
+    return;
+  }
+  const who = ev.target.closest('[data-who]');
+  if (who) {
+    const role = C.ROLES[who.dataset.who];
+    cfg = { ...cfg, role: who.dataset.who, me: role.me, feed: role.feed };
+    store.set('bl.cfg', cfg);
+    render();
+    nextGuide();
+  }
+});
+
+function connectWith(text) {
+  const setup = C.findSetup(text);
+  if (!setup) return false;
+  applySetup(setup);
+  toast('Connected. You both see the same log now.');
+  nextGuide();
+  return true;
+}
+$('#guideConnect').addEventListener('click', async () => {
+  let text = '';
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) text = await navigator.clipboard.readText();
+  } catch { text = ''; }
+  if (!connectWith(text)) $('#guideConnectHelp').hidden = false;
+});
+$('#guidePasteGo').addEventListener('click', () => {
+  const ok = connectWith($('#guidePaste').value);
+  $('#guidePasteError').hidden = ok;
+  if (!ok) $('#guidePaste').focus();
+});
+$('#guideWhoOther').addEventListener('click', () => { $('#guideOther').hidden = false; $('#guideName').focus(); });
+$('#guideNameGo').addEventListener('click', () => {
+  const name = $('#guideName').value.trim();
+  if (!name) { $('#guideName').focus(); return; }
+  cfg = { ...cfg, role: 'other', me: name, feed: cfg.feed || 'breast' };
+  store.set('bl.cfg', cfg);
+  render();
+  nextGuide();
+});
+// The guide cannot be dismissed by accident; every screen has its own way on.
+guide.addEventListener('cancel', (ev) => ev.preventDefault());
 $('#nudgeHide').addEventListener('click', () => { store.set('bl.hideNudge', true); $('#nudge').hidden = true; });
 
 // A sheet closes on a tap outside it only when nothing typed would be lost; Esc and Cancel always work.
@@ -497,7 +684,7 @@ for (const sheet of [editSheet, settingsSheet, helpSheet, welcomeSheet]) {
   sheet.addEventListener('click', (ev) => {
     if (ev.target !== sheet) return;
     if (sheet === helpSheet || sheet === welcomeSheet) sheet.close();
-    else if (sheet === settingsSheet && !cfg.token && !$('#setToken').value) sheet.close();
+    else if (sheet === settingsSheet && !$('#setToken').value && !$('#setMe').value) sheet.close();
   });
 }
 
@@ -540,31 +727,31 @@ async function runSync(announce) {
 }
 
 // Opening a setup link from the other phone turns sharing on without typing anything.
+// This also runs every time the Home Screen app opens, because its saved address carries the settings.
 function acceptSetupLink() {
   const m = /^#s=([\w-]+)$/.exec(location.hash);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search); // drop the key from the address bar
   const setup = C.decodeSetup(m[1]);
-  if (!setup) { toast('That setup link is not readable. Ask for a fresh one.'); return; }
-  cfg = { ...cfg, token: setup.t, repo: setup.r, baby: cfg.baby || setup.b };
-  store.set('bl.cfg', cfg);
-  state.shas = {};
-  for (const e of Object.values(state.events)) state.dirty[C.bucketOf(e.id)] = Date.now();
-  persist();
-  toast('Sharing is on. Add your name in Settings.', 'Settings', openSettings);
+  if (!setup) { toast('That invite link is not readable. Ask for a fresh one.'); return; }
+  if (C.sameSetup(cfg, setup)) return; // already connected to this log: nothing to do, nothing to say
+  applySetup(setup);
+  toast('Connected. You both see the same log now.');
 }
 
 // ── Start ───────────────────────────────────────────────────────────────────────────────────────
 for (const btn of document.querySelectorAll('.act')) btn.addEventListener('click', () => logNow(btn.dataset.log));
 
 acceptSetupLink();
+keepSetupInAddress();
 setSync(cfg.token && !DEMO ? 'syncing' : 'local');
 render();
 renderNudge();
 queueSync(0);
 
-// First open on this phone: say hello and show the three things there are to know.
-if (!DEMO && !store.get('bl.seenWelcome', false) && !Object.keys(state.events).length) welcomeSheet.showModal();
+// First open on this phone: the guide shows whichever screen it still needs, then the tips, once.
+if (FORCE && FORCE.startsWith('guide-')) showGuide(FORCE.slice(6));
+else if (!DEMO) nextGuide();
 
 setInterval(renderSince, 20e3);
 setInterval(() => { if (document.visibilityState === 'visible') queueSync(0); }, 60e3);
@@ -576,6 +763,7 @@ window.addEventListener('online', () => queueSync(0));
 if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots and checks
   const show = new URLSearchParams(location.search).get('demo');
   if (show === 'tray') logNow('feed');
+  if (show === 'pump') logNow('pump');
   if (show === 'edit') openEdit(C.live(Object.values(state.events))[0].id);
   if (show === 'settings') openSettings();
   if (show === 'help') openHelp();
