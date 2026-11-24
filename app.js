@@ -90,13 +90,25 @@ function el(tag, cls, text) {
   return n;
 }
 
+// One of the drawings defined at the top of index.html, by name: feed, pee, poop, flower, baby.
+const SVG = 'http://www.w3.org/2000/svg';
+function art(name) {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('class', 'art');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(SVG, 'use');
+  use.setAttribute('href', `#i-${name}`);
+  svg.append(use);
+  return svg;
+}
+
 function renderLog() {
   const box = $('#log');
   box.replaceChildren();
   const groups = C.groupByDay(Object.values(state.events));
   if (!groups.length) {
     const empty = el('div', 'empty');
-    empty.append(el('p', 'empty-title', 'Nothing logged yet'),
+    empty.append(art('baby'), el('p', 'empty-title', 'Nothing logged yet'),
       el('p', 'empty-text', 'Tap Feed, Pee or Poop below the moment it happens. One tap saves it with the time.'));
     box.append(empty);
     return;
@@ -115,7 +127,12 @@ function renderLog() {
       what.append(el('span', 'row-kind', C.KIND_LABEL[e.k]));
       const d = C.detail(e);
       if (d) what.append(el('span', 'row-detail', d));
-      row.append(el('span', 'row-time', C.clock(e.t)), what, el('span', 'row-by', e.by || ''));
+      const ico = el('span', 'row-ico');
+      ico.dataset.kind = e.k;
+      ico.append(art(e.k));
+      const meta = el('span', 'row-meta');
+      meta.append(el('span', 'row-time', C.clock(e.t)), el('span', 'row-by', e.by || ''));
+      row.append(ico, what, meta);
       row.setAttribute('aria-label', `${C.KIND_LABEL[e.k]} at ${C.clock(e.t)}${d ? `, ${d}` : ''}. Edit`);
       li.append(row);
       list.append(li);
@@ -396,11 +413,6 @@ $('#setExport').addEventListener('click', () => {
 $('#gearBtn').addEventListener('click', openSettings);
 $('#syncBtn').addEventListener('click', () => (cfg.token ? queueSync(0, true) : openSettings()));
 
-// A sheet closes on a tap outside it only when nothing typed would be lost; Esc and Cancel always work.
-for (const sheet of [editSheet, settingsSheet]) {
-  sheet.addEventListener('click', (ev) => { if (ev.target === sheet && sheet === settingsSheet && !cfg.token && !$('#setToken').value) sheet.close(); });
-}
-
 // ── Home Screen steps: read them here, or copy them into a text ────────────────────────────────
 const APP_URL = `${location.origin}${location.pathname.replace(/index\.html$/, '')}`;
 $('#installSteps').replaceChildren(...C.installSteps(APP_URL).map((s) => el('li', '', s)));
@@ -429,6 +441,55 @@ $('#installCopy').addEventListener('click', async () => {
   toast(ok ? 'Steps copied. Paste them into a text.' : 'Could not copy. Press and hold the steps to copy them.');
   $('#installCopy').focus();
 });
+
+function showInstallSteps() {
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  const box = $('#install');
+  box.open = true;
+  box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  box.querySelector('summary').focus({ preventScroll: true });
+}
+
+// ── Welcome, help, and the Home Screen nudge ───────────────────────────────────────────────────
+const helpSheet = $('#helpSheet');
+const welcomeSheet = $('#welcomeSheet');
+const IS_IPHONE = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const ON_HOME_SCREEN = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const FORCE = new URLSearchParams(location.search).get('show'); // ?show=nudge, for checks and screenshots
+
+function openHelp() {
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  helpSheet.showModal();
+  helpSheet.scrollTop = 0;
+}
+$('#helpBtn').addEventListener('click', openHelp);
+$('#setHelp').addEventListener('click', openHelp);
+$('#helpClose').addEventListener('click', () => helpSheet.close());
+$('#helpInstall').addEventListener('click', showInstallSteps);
+
+function closeWelcome() { store.set('bl.seenWelcome', true); welcomeSheet.close(); }
+$('#welcomeOk').addEventListener('click', closeWelcome);
+$('#welcomeMore').addEventListener('click', () => { closeWelcome(); openHelp(); });
+welcomeSheet.addEventListener('close', () => store.set('bl.seenWelcome', true));
+
+function renderNudge() {
+  const show = FORCE === 'nudge' || (IS_IPHONE && !ON_HOME_SCREEN && !DEMO && !store.get('bl.hideNudge', false));
+  $('#nudge').hidden = !show;
+  if (show && cfg.token) {
+    $('#nudgeText').textContent = 'Sharing is on here in Safari. The Home Screen app keeps its own settings, so after you add it, paste the same setup link in its Settings too.';
+  }
+}
+$('#nudgeShow').addEventListener('click', showInstallSteps);
+$('#nudgeHide').addEventListener('click', () => { store.set('bl.hideNudge', true); $('#nudge').hidden = true; });
+
+// A sheet closes on a tap outside it only when nothing typed would be lost; Esc and Cancel always work.
+for (const sheet of [editSheet, settingsSheet, helpSheet, welcomeSheet]) {
+  sheet.addEventListener('click', (ev) => {
+    if (ev.target !== sheet) return;
+    if (sheet === helpSheet || sheet === welcomeSheet) sheet.close();
+    else if (sheet === settingsSheet && !cfg.token && !$('#setToken').value) sheet.close();
+  });
+}
 
 // ── Sync ────────────────────────────────────────────────────────────────────────────────────────
 let syncTimer = null;
@@ -489,7 +550,11 @@ for (const btn of document.querySelectorAll('.act')) btn.addEventListener('click
 acceptSetupLink();
 setSync(cfg.token && !DEMO ? 'syncing' : 'local');
 render();
+renderNudge();
 queueSync(0);
+
+// First open on this phone: say hello and show the three things there are to know.
+if (!DEMO && !store.get('bl.seenWelcome', false) && !Object.keys(state.events).length) welcomeSheet.showModal();
 
 setInterval(renderSince, 20e3);
 setInterval(() => { if (document.visibilityState === 'visible') queueSync(0); }, 60e3);
@@ -503,6 +568,8 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'tray') logNow('feed');
   if (show === 'edit') openEdit(C.live(Object.values(state.events))[0].id);
   if (show === 'settings') openSettings();
+  if (show === 'help') openHelp();
+  if (show === 'welcome') welcomeSheet.showModal();
 }
 
 if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {

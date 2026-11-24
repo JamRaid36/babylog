@@ -5,45 +5,113 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Baby log</title>
-<meta name="theme-color" content="#1A1A1A">
+<meta name="theme-color" content="#FFD9E6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#4A2B3D" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Baby log">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="baby-180.png">
-<link rel="icon" type="image/png" href="baby-180.png">
+<link rel="apple-touch-icon" href="bloom-180.png">
+<link rel="icon" type="image/png" href="bloom-180.png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to the log</a>
 
+<!-- The drawings. Each is used by name with <svg class="art"><use href="#i-…"/></svg>. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-feed" viewBox="0 0 48 48">
+    <path d="M19.500 12c0-6.500 9-6.500 9 0z" fill="#F7A8C4"/>
+    <rect x="15" y="11.500" width="18" height="6" rx="3" fill="#E86FA0"/>
+    <rect x="14" y="17" width="20" height="26" rx="8" fill="#FFFFFF" stroke="#E86FA0" stroke-width="2"/>
+    <path d="M15.500 27h17v8a6.500 6.500 0 0 1-6.500 6.500h-4a6.500 6.500 0 0 1-6.500-6.500z" fill="#FFE1EC"/>
+    <circle cx="20.500" cy="31" r="1.500" fill="#6B3A55"/><circle cx="27.500" cy="31" r="1.500" fill="#6B3A55"/>
+    <path d="M21.500 34.500q2.500 2.300 5 0" fill="none" stroke="#6B3A55" stroke-width="1.500" stroke-linecap="round"/>
+    <circle cx="18" cy="34" r="1.600" fill="#F7A8C4" opacity=".8"/><circle cx="30" cy="34" r="1.600" fill="#F7A8C4" opacity=".8"/>
+  </symbol>
+  <symbol id="i-pee" viewBox="0 0 48 48">
+    <path d="M24 5c7.500 9.500 12.500 15.500 12.500 23a12.500 12.500 0 0 1-25 0c0-7.500 5-13.500 12.500-23z" fill="#FFE08A" stroke="#F0B94A" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M17 24c.500-3 2-5.500 4-8" fill="none" stroke="#FFFFFF" stroke-width="2.500" stroke-linecap="round" opacity=".85"/>
+    <circle cx="20" cy="29" r="1.600" fill="#6B3A55"/><circle cx="28" cy="29" r="1.600" fill="#6B3A55"/>
+    <path d="M21 33q3 2.600 6 0" fill="none" stroke="#6B3A55" stroke-width="1.600" stroke-linecap="round"/>
+    <circle cx="17" cy="32.500" r="1.800" fill="#F7A8C4" opacity=".85"/><circle cx="31" cy="32.500" r="1.800" fill="#F7A8C4" opacity=".85"/>
+  </symbol>
+  <symbol id="i-poop" viewBox="0 0 48 48">
+    <path d="M25 5c1 4.500-1.500 6.500-4.500 7.500-3.500 1.200-5 3.500-4 6.500-4 .800-6 4-5 7.500-4.500 1.200-6.500 5.500-4.500 9.500 1.300 2.700 4 4.500 7.500 4.500h19c3.500 0 6.200-1.800 7.500-4.500 2-4 0-8.300-4.500-9.500 1-3.500-1-6.700-5-7.500 1-4-1-6.500-3.500-8-1.500-.900-2.500-3-3-6z" fill="#C79B7A" stroke="#9A6E52" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="19" cy="30" r="3.300" fill="#FFFFFF"/><circle cx="29" cy="30" r="3.300" fill="#FFFFFF"/>
+    <circle cx="19.600" cy="30.400" r="1.500" fill="#5A3B2A"/><circle cx="28.400" cy="30.400" r="1.500" fill="#5A3B2A"/>
+    <path d="M20.500 36q3.500 3 7 0" fill="none" stroke="#5A3B2A" stroke-width="1.700" stroke-linecap="round"/>
+    <circle cx="14.500" cy="34.500" r="1.900" fill="#F7A8C4" opacity=".85"/><circle cx="33.500" cy="34.500" r="1.900" fill="#F7A8C4" opacity=".85"/>
+  </symbol>
+  <symbol id="i-flower" viewBox="0 0 48 48">
+    <g fill="currentColor">
+      <circle cx="24" cy="12" r="8"/><circle cx="35.400" cy="20.300" r="8"/><circle cx="31" cy="33.700" r="8"/>
+      <circle cx="17" cy="33.700" r="8"/><circle cx="12.600" cy="20.300" r="8"/>
+    </g>
+    <circle cx="24" cy="24" r="6.500" fill="#FFD86B"/>
+  </symbol>
+  <symbol id="i-baby" viewBox="0 0 48 48">
+    <path d="M23.500 9.500c-1-4 2-6.500 4.800-5.300 2.400 1 2 4.400-.600 4.400" fill="none" stroke="#B9826A" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="8.500" cy="27" r="4" fill="#FFD9C7"/><circle cx="39.500" cy="27" r="4" fill="#FFD9C7"/>
+    <circle cx="24" cy="26" r="16" fill="#FFE8DC"/>
+    <circle cx="15.500" cy="30.500" r="3.200" fill="#F7A8C4" opacity=".8"/><circle cx="32.500" cy="30.500" r="3.200" fill="#F7A8C4" opacity=".8"/>
+    <path d="M16 25q3 2.800 6 0M26 25q3 2.800 6 0" fill="none" stroke="#6B3A55" stroke-width="1.800" stroke-linecap="round"/>
+    <path d="M21.500 32q2.500 2.300 5 0" fill="none" stroke="#6B3A55" stroke-width="1.700" stroke-linecap="round"/>
+    <g fill="#F28FB1"><circle cx="34" cy="10" r="3"/><circle cx="38.300" cy="13.100" r="3"/><circle cx="36.600" cy="18.200" r="3"/><circle cx="31.400" cy="18.200" r="3"/><circle cx="29.700" cy="13.100" r="3"/></g>
+    <circle cx="34" cy="14.500" r="2.500" fill="#FFD86B"/>
+  </symbol>
+</svg>
+
 <header class="bar">
-  <div class="bar-title">
-    <p class="bar-eyebrow">Feeds &middot; Diapers</p>
-    <h1 id="babyName">Baby log</h1>
+  <svg class="art bar-deco bar-deco-1" aria-hidden="true"><use href="#i-flower"/></svg>
+  <svg class="art bar-deco bar-deco-2" aria-hidden="true"><use href="#i-flower"/></svg>
+  <svg class="art bar-deco bar-deco-3" aria-hidden="true"><use href="#i-flower"/></svg>
+  <div class="bar-top">
+    <svg class="art bar-face" aria-hidden="true"><use href="#i-baby"/></svg>
+    <div class="bar-title">
+      <p class="bar-eyebrow">Feeds &amp; diapers</p>
+      <h1 id="babyName">Baby log</h1>
+    </div>
+    <button type="button" class="icon-btn" id="helpBtn" aria-label="How this works"><span aria-hidden="true">?</span></button>
+    <button type="button" class="icon-btn" id="gearBtn" aria-label="Settings">
+      <svg class="line" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.700M16.800 7.200l1.700-1.700"/></svg>
+    </button>
   </div>
   <button type="button" class="sync" id="syncBtn">
     <span class="sync-dot" aria-hidden="true"></span><span id="syncText">This phone only</span>
   </button>
-  <button type="button" class="icon-btn" id="gearBtn" aria-label="Settings">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></svg>
-  </button>
 </header>
 
 <main id="main">
+  <!-- Shown in Safari on an iPhone until the app is on the Home Screen. -->
+  <div class="nudge" id="nudge" hidden>
+    <svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>
+    <div class="nudge-body">
+      <p class="nudge-title">Put Baby log on your Home Screen</p>
+      <p class="nudge-text" id="nudgeText">It opens like a real app, one tap from your Home Screen.</p>
+      <div class="nudge-actions">
+        <button type="button" class="btn btn-primary" id="nudgeShow">Show me how</button>
+        <button type="button" class="link-btn" id="nudgeHide">Not now</button>
+      </div>
+    </div>
+  </div>
+
   <section class="since" aria-label="Time since the last feed, pee and poop">
     <div class="since-item" data-kind="feed">
+      <svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>
       <h2 class="eyebrow">Last feed</h2>
       <p class="since-value" id="sinceFeed">&ndash;</p>
       <p class="since-sub" id="sinceFeedSub">None yet</p>
     </div>
     <div class="since-item" data-kind="pee">
+      <svg class="art" aria-hidden="true"><use href="#i-pee"/></svg>
       <h2 class="eyebrow">Last pee</h2>
       <p class="since-value" id="sincePee">&ndash;</p>
       <p class="since-sub" id="sincePeeSub">None yet</p>
     </div>
     <div class="since-item" data-kind="poop">
+      <svg class="art" aria-hidden="true"><use href="#i-poop"/></svg>
       <h2 class="eyebrow">Last poop</h2>
       <p class="since-value" id="sincePoop">&ndash;</p>
       <p class="since-sub" id="sincePoopSub">None yet</p>
@@ -58,7 +126,7 @@
   <details class="install" id="install">
     <summary>
       <span>Put this app on a Home Screen</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      <svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </summary>
     <div class="install-body">
       <p class="install-note">For iPhone. Copy the steps and text them to whoever needs the app.</p>
@@ -100,15 +168,15 @@
 
 <nav class="actions" aria-label="Log it now, one tap">
   <button type="button" class="act" data-log="feed">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 2.5h5M10 2.5v2.2M14 2.5v2.2M8.5 7.5c0-1.6 1.2-2.8 3.5-2.8s3.5 1.2 3.5 2.8v1.4c1 .5 1.5 1.3 1.5 2.4V19a2.5 2.5 0 0 1-2.5 2.5h-5A2.5 2.5 0 0 1 7 19v-7.7c0-1.1.5-1.9 1.5-2.4z"/><path d="M7 13h3M7 16.5h3"/></svg>
+    <svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>
     <span class="act-label">Feed</span>
   </button>
   <button type="button" class="act" data-log="pee">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8c3.4 4.2 6 7.6 6 11.1a6 6 0 0 1-12 0c0-3.500 2.600-6.900 6-11.100z"/><path d="M9.300 14.500a2.800 2.800 0 0 0 2.300 2.700"/></svg>
+    <svg class="art" aria-hidden="true"><use href="#i-pee"/></svg>
     <span class="act-label">Pee</span>
   </button>
   <button type="button" class="act" data-log="poop">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 3c.3 1.600-.4 2.700-1.700 3.500-1.200.7-1.800 1.600-1.600 2.900"/><path d="M8.200 9.400h7a2.500 2.500 0 0 1 .600 4.900"/><path d="M8.200 9.400a2.500 2.500 0 0 0-.900 4.800"/><path d="M6.500 14.200h11a3.200 3.200 0 0 1 0 6.400h-11a3.200 3.200 0 0 1 0-6.400z"/></svg>
+    <svg class="art" aria-hidden="true"><use href="#i-poop"/></svg>
     <span class="act-label">Poop</span>
   </button>
 </nav>
@@ -177,17 +245,19 @@
       <span class="field-help">Shown next to what you log, so you can tell who logged what.</span>
     </label>
 
-    <h3 class="eyebrow sheet-sub">Sharing between phones</h3>
+    <h3 class="sheet-sub">Sharing between phones</h3>
     <p class="sheet-status" id="setStatus"></p>
     <label class="field">
       <span class="eyebrow">Sync key or setup link</span>
       <input type="text" id="setToken" name="synckey" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-      <span class="field-help">First phone: paste the GitHub key that can read and write the private log. Second phone: paste the setup link the first phone sent.</span>
+      <span class="field-help"><strong>Were you texted a setup link?</strong> Press and hold it in the text, tap Copy, then press and hold this box and tap Paste. Then tap Save settings. That's all.</span>
+      <span class="field-help">Setting up the very first phone? Paste the GitHub key here instead.</span>
       <span class="field-error" id="setTokenError" hidden></span>
     </label>
     <label class="field">
       <span class="eyebrow">Private log location</span>
       <input type="text" id="setRepo" name="logrepo" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <span class="field-help">Leave this as it is.</span>
     </label>
 
     <div class="sheet-actions">
@@ -196,7 +266,98 @@
     </div>
     <button type="button" class="btn" id="setShare" hidden>Send setup link to the other phone</button>
     <button type="button" class="btn" id="setExport">Download the log as a spreadsheet</button>
+    <button type="button" class="btn" id="setHelp">How this works</button>
   </form>
+</dialog>
+
+<!-- First open only. -->
+<dialog class="sheet welcome" id="welcomeSheet" aria-labelledby="welcomeTitle">
+  <svg class="art welcome-art" aria-hidden="true"><use href="#i-baby"/></svg>
+  <h2 class="sheet-title" id="welcomeTitle" tabindex="-1" autofocus>Welcome to Baby log</h2>
+  <p class="welcome-lead">Keeping track is one tap. Here's all there is to it.</p>
+  <ul class="tips">
+    <li><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg><span><strong>Tap Feed, Pee or Poop</strong> the moment it happens. It's saved with the time. Nothing else to fill in.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg><span><strong>Forgot one?</strong> Tap it now, then tap 15 min, 30 min or 1 hour.</span></li>
+    <li><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg><span><strong>Made a mistake?</strong> Tap Undo, or tap any entry to fix or delete it.</span></li>
+  </ul>
+  <div class="sheet-actions">
+    <button type="button" class="btn btn-primary" id="welcomeOk">Got it</button>
+    <button type="button" class="btn" id="welcomeMore">Show me more</button>
+  </div>
+</dialog>
+
+<!-- The whole manual. Opened with the ? button. -->
+<dialog class="sheet help" id="helpSheet" aria-labelledby="helpTitle">
+  <h2 class="sheet-title" id="helpTitle" tabindex="-1" autofocus>How this works</h2>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-feed"/></svg>Logging</h3>
+    <ol>
+      <li>Tap <strong>Feed</strong>, <strong>Pee</strong> or <strong>Poop</strong> at the bottom the moment it happens.</li>
+      <li>That's it. It's saved with the time.</li>
+    </ol>
+    <p>A little tray pops up for a few seconds. Use it only if you want to: <strong>Undo</strong>, say it happened earlier, or for a feed pick <strong>Left</strong>, <strong>Right</strong>, <strong>Both</strong> or <strong>Bottle</strong>. Ignore it and it goes away.</p>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>Forgot to log one?</h3>
+    <ol>
+      <li>Tap the button now.</li>
+      <li>In the tray, tap <strong>15 min</strong>, <strong>30 min</strong> or <strong>1 hour</strong>.</li>
+      <li>For any other time, tap <strong>Add a note or exact time</strong>.</li>
+    </ol>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg>Fix or delete an entry</h3>
+    <ol>
+      <li>Tap the entry in <strong>History</strong>.</li>
+      <li>Change what you need and tap <strong>Save entry</strong>.</li>
+      <li>To remove it, tap <strong>Delete this entry</strong>, then tap it again.</li>
+    </ol>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-pee"/></svg>What the top of the screen shows</h3>
+    <p><strong>Last feed, Last pee, Last poop</strong> is how long ago each one was. <strong>Last 24 hours</strong> is how many of each since this time yesterday.</p>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-flower"/></svg>Sharing with the other phone</h3>
+    <p>The words under the baby's name tell you where your entries are:</p>
+    <ul>
+      <li><strong>This phone only</strong>: entries stay on this phone.</li>
+      <li><strong>Shared</strong>: both phones see the same log.</li>
+      <li><strong>Syncing</strong>: sending right now.</li>
+      <li><strong>Not synced</strong>: usually no signal. Your entries are safe and it keeps trying. Tap it to try again.</li>
+    </ul>
+    <p><strong>To join a log someone shared with you:</strong></p>
+    <ol>
+      <li>Put this app on your Home Screen first (steps below), and open it from there.</li>
+      <li>In the text you were sent, press and hold the setup link and tap <strong>Copy</strong>.</li>
+      <li>In this app, tap the gear at the top.</li>
+      <li>Press and hold the box under <strong>Sync key or setup link</strong>, tap <strong>Paste</strong>.</li>
+      <li>Tap <strong>Save settings</strong>. The top now says <strong>Shared</strong>.</li>
+    </ol>
+    <p><strong>To invite another phone:</strong> tap the gear, then <strong>Send setup link to the other phone</strong>.</p>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg>Put it on your Home Screen</h3>
+    <p>So it opens like a real app with one tap.</p>
+    <button type="button" class="btn" id="helpInstall">Show me the steps</button>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-poop"/></svg>Good to know</h3>
+    <ul>
+      <li><strong>No signal?</strong> It still works. Entries wait on your phone and send themselves later.</li>
+      <li><strong>Doctor wants numbers?</strong> Tap the gear, then <strong>Download the log as a spreadsheet</strong>.</li>
+      <li><strong>Add your name</strong> in the gear so you can tell who logged what.</li>
+    </ul>
+  </section>
+
+  <button type="button" class="btn btn-primary" id="helpClose">Got it</button>
 </dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden>

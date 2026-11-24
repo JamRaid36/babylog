@@ -103,11 +103,27 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     await load('../index.html');
     d = frame.contentDocument;
     check('first open is empty with a hint', d.querySelector('.empty-title')?.textContent === 'Nothing logged yet');
+    check('first open says welcome', d.querySelector('#welcomeSheet').open);
+    d.querySelector('#welcomeMore').click();
+    check('"Show me more" opens the full help', !d.querySelector('#welcomeSheet').open && d.querySelector('#helpSheet').open);
+    check('help covers joining a shared log', d.querySelector('#helpSheet').textContent.includes('Sync key or setup link') && d.querySelector('#helpSheet').textContent.includes('Save settings'));
+    d.querySelector('#helpInstall').click();
+    check('help can jump to the Home Screen steps', !d.querySelector('#helpSheet').open && d.querySelector('#install').open);
+    d.querySelector('#helpBtn').click();
+    check('the ? button opens help any time', d.querySelector('#helpSheet').open);
+    d.querySelector('#helpClose').click();
     d.querySelector('.act[data-log="poop"]').click();
     d.querySelector('.act[data-log="feed"]').click();
     await load('../index.html?reopen');
     d = frame.contentDocument;
     check('entries are still there after reopening', d.querySelectorAll('.row').length === 2, `rows=${d.querySelectorAll('.row').length}`);
+    check('welcome is not shown twice', !d.querySelector('#welcomeSheet').open);
+    check('each entry has its little drawing', d.querySelectorAll('.row .row-ico use').length === 2);
+    await load('../index.html?show=nudge');
+    d = frame.contentDocument;
+    check('the Home Screen nudge can show and be dismissed', !d.querySelector('#nudge').hidden && (d.querySelector('#nudgeHide').click(), d.querySelector('#nudge').hidden));
+    await load('../index.html?reopen');
+    d = frame.contentDocument;
     check('sharing is off until a key is added', d.querySelector('#syncText').textContent === 'This phone only');
 
     // ── setup link from the other phone ──

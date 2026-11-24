@@ -5,10 +5,10 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1A1A1A",
-  "theme_color": "#1A1A1A",
+  "background_color": "#FFF5F8",
+  "theme_color": "#FFD9E6",
   "icons": [
-    { "src": "baby-180.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "baby-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "bloom-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "bloom-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
