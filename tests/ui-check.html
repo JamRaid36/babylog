@@ -192,7 +192,7 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     await load('../index.html?demo&pump');
     d = frame.contentDocument;
     const qq = (s) => d.querySelector(s);
-    check('four one-tap buttons', d.querySelectorAll('.act').length === 4 && qq('.act[data-log="pump"] .act-label').textContent === 'Pump');
+    check('five one-tap buttons, Meds last', d.querySelectorAll('.act').length === 5 && qq('.act[data-log="pump"] .act-label').textContent === 'Pump' && qq('.act:last-child .act-label').textContent === 'Meds');
     check('four "last" tiles', d.querySelectorAll('.since-item').length === 4 && qq('#sincePumpSub').textContent === 'None yet');
     qq('.act[data-log="pump"]').click();
     check('a pump asks how much, not which side', !qq('#trayAmount').hidden && qq('#traySide').hidden && qq('#trayAmountLabel').textContent === 'How much did you get');
@@ -419,6 +419,9 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     m('#medForm input[name="every"][value="6"]').checked = true;
     m('#medForm').requestSubmit();
     check('meds: it is added and the card says not taken yet', !m('#medSheet').open && d.querySelectorAll('.med').length === 1 && m('.med-head').textContent === 'Not taken yet' && m('.med-name').textContent.includes('600 mg'));
+    m('.act[data-log="meds"]').click();
+    check('meds: with one medicine the big Meds button goes straight to Took it', m('#doseSheet').open && m('#doseTitle').textContent.startsWith('Ibuprofen') && !m('#medPickSheet').open);
+    m('#doseCancel').click();
     m('.med [data-med="took"]').click();
     check('meds: Took it opens a sheet and logs nothing yet', m('#doseSheet').open && m('#doseTitle').textContent.startsWith('Ibuprofen') && m('#doseWarn').hidden && Object.values(JSON.parse(localStorage.getItem('bl.meds') || '{}')).every((e) => e.k !== 'dose'));
     m('#doseForm input[name="back"][value="30"]').checked = true;
@@ -460,6 +463,13 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     await load('../index.html?demo=dose-early');
     d = frame.contentDocument;
     check('meds: sample data shows three medicines, one OK now', d.querySelectorAll('.med').length === 3 && [...d.querySelectorAll('.med')].some((x) => x.dataset.ok === 'true'));
+    d.querySelector('#doseCancel').click();
+    d.querySelector('.act[data-log="meds"]').click();
+    check('meds: with several, the Meds button asks which, with each status', d.querySelector('#medPickSheet').open && d.querySelectorAll('#medPickList [data-pick]').length === 3 && d.querySelector('#medPickList .pick-status').textContent.length > 0);
+    d.querySelectorAll('#medPickList [data-pick]')[1].click();
+    check('meds: picking one opens its Took it sheet', !d.querySelector('#medPickSheet').open && d.querySelector('#doseSheet').open && d.querySelector('#doseTitle').textContent === 'Tylenol');
+    d.querySelector('#doseForm').requestSubmit();
+    check('meds: saving from there flashes the Meds button', d.querySelector('.act[data-log="meds"]').classList.contains('is-logged') && d.querySelector('.act[data-log="meds"] .act-label').textContent === 'Saved');
   } catch (err) {
     check('the check itself ran', false, String(err && err.stack || err));
   } finally {

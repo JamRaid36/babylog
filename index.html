@@ -297,6 +297,10 @@
     <svg class="art" aria-hidden="true"><use href="#i-pump"/></svg>
     <span class="act-label">Pump</span>
   </button>
+  <button type="button" class="act" data-log="meds" aria-label="Mom took a medicine">
+    <svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>
+    <span class="act-label">Meds</span>
+  </button>
 </nav>
 
 <dialog class="sheet" id="editSheet" aria-labelledby="editTitle">
@@ -383,6 +387,16 @@
       <button type="button" class="btn" id="doseCancel">Cancel</button>
     </div>
   </form>
+</dialog>
+
+<!-- The Meds button, when she has more than one medicine: which one did she take? -->
+<dialog class="sheet" id="medPickSheet" aria-labelledby="medPickTitle">
+  <h2 class="sheet-title" id="medPickTitle" tabindex="-1" autofocus>Which did Mom take?</h2>
+  <ul class="pick-list" id="medPickList"></ul>
+  <div class="sheet-actions">
+    <button type="button" class="btn" id="medPickAdd">+ Add a medicine</button>
+    <button type="button" class="btn" id="medPickCancel">Cancel</button>
+  </div>
 </dialog>
 
 <!-- Add a medicine, or change one: its name, dose and how often, and the doses she has taken. -->
@@ -606,7 +620,7 @@
     <h3><svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>Mom's meds</h3>
     <ol>
       <li>Tap <strong>+ Add</strong> beside <strong>Mom's meds</strong>. Pick Ibuprofen or Tylenol, or type any medicine. Add the dose if you like, and how often she takes it.</li>
-      <li>Each time she takes one, tap <strong>Took it</strong>, then <strong>Save</strong>. Took it a while ago? Tap <strong>30 min ago</strong> or pick the time.</li>
+      <li>Each time she takes one, tap the big <strong>Meds</strong> button at the bottom (or <strong>Took it</strong> on the medicine), then <strong>Save</strong>. Took it a while ago? Tap <strong>30 min ago</strong> or pick the time.</li>
       <li>The card then says when it is <strong>OK again</strong>, on both phones, so either of you can check at 3 AM.</li>
     </ol>
     <p>If it is earlier than her schedule says, the Took it screen tells you when the last one was. Jubilee only keeps time. Her prescription or the label decides the dose.</p>

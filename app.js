@@ -349,7 +349,7 @@ function flashButton(kind) {
   const label = btn.querySelector('.act-label');
   btn.classList.add('is-logged');
   label.textContent = 'Saved';
-  setTimeout(() => { btn.classList.remove('is-logged'); label.textContent = C.KIND_LABEL[kind]; }, 1100);
+  setTimeout(() => { btn.classList.remove('is-logged'); label.textContent = C.KIND_LABEL[kind] || 'Meds'; }, 1100);
 }
 
 // ── Toast ───────────────────────────────────────────────────────────────────────────────────────
@@ -662,12 +662,53 @@ $('#doseForm').addEventListener('submit', (ev) => {
   if (!saved) return undefined;
   const card = document.querySelector(`.med[data-id="${med.id}"]`);
   if (card) { card.classList.remove('is-logged'); void card.offsetWidth; card.classList.add('is-logged'); }
+  flashButton('meds');
   const s = medStatusOf(med.id);
   const next = s && s.nextAt && s.last && s.last.id === saved.id ? `. OK again ${C.clock(s.nextAt)}` : '';
   toast(`${med.name} saved · ${C.clock(saved.t)}${next}`, 'Undo', () => { if (meds.events[saved.id]) putMed({ ...meds.events[saved.id], x: true }); });
   return undefined;
 });
 $('#doseCancel').addEventListener('click', () => doseSheet.close());
+
+// The big Meds button: no medicine yet, add one; one, straight to Took it; more, ask which.
+const medPickSheet = $('#medPickSheet');
+function medsButton() {
+  const list = M.medStatus(Object.values(meds.events));
+  if (!list.length) { openMed(null); return; }
+  if (list.length === 1) { openDose(list[0].med.id); return; }
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  hideToast();
+  const now = Date.now();
+  $('#medPickList').replaceChildren(...list.map((s) => {
+    const words = M.statusText(s, now);
+    const li = el('li');
+    const b = el('button', 'pick');
+    b.type = 'button';
+    b.dataset.pick = s.med.id;
+    b.dataset.ok = String(!!s.last && s.ok);
+    const name = el('span', 'pick-name', s.med.name);
+    if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
+    const text = el('span');
+    text.append(name, el('span', 'pick-status', words.head));
+    const go = document.createElementNS(SVG, 'svg');
+    go.setAttribute('class', 'line');
+    go.setAttribute('viewBox', '0 0 24 24');
+    go.setAttribute('aria-hidden', 'true');
+    go.innerHTML = '<path d="M9 6l6 6-6 6"/>'; // a fixed arrow, never anything typed or synced
+    b.append(text, go);
+    b.setAttribute('aria-label', `${M.medLabel(s.med)}. ${words.head}`);
+    li.append(b);
+    return li;
+  }));
+  medPickSheet.showModal();
+}
+$('#medPickList').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-pick]');
+  if (b) openDose(b.dataset.pick);
+});
+$('#medPickAdd').addEventListener('click', () => openMed(null));
+$('#medPickCancel').addEventListener('click', () => medPickSheet.close());
+medPickSheet.addEventListener('click', (ev) => { if (ev.target === medPickSheet) medPickSheet.close(); });
 
 // Add a medicine, or change one and see her doses of it.
 let medId = null;
@@ -1179,7 +1220,7 @@ function acceptSetupLink() {
 }
 
 // ── Start ───────────────────────────────────────────────────────────────────────────────────────
-for (const btn of document.querySelectorAll('.act')) btn.addEventListener('click', () => logNow(btn.dataset.log));
+for (const btn of document.querySelectorAll('.act')) btn.addEventListener('click', () => (btn.dataset.log === 'meds' ? medsButton() : logNow(btn.dataset.log)));
 
 acceptSetupLink();
 keepSetupInAddress();
@@ -1214,6 +1255,7 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'med') openMed(medIds[0]);
   if (show === 'dose') openDose(medIds[1]);
   if (show === 'dose-early') openDose(medIds[0]);
+  if (show === 'meds-pick') medsButton();
   if (show === 'meds-empty') { for (const k of Object.keys(meds.events)) delete meds.events[k]; renderMeds(); }
 }
 
