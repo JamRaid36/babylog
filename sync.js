@@ -1,4 +1,5 @@
-// Shared storage: a private GitHub repo, one small JSON file per day (days/YYYY-MM-DD.json).
+// Shared storage: a private GitHub repo, one small JSON file per day (days/YYYY-MM-DD.json; Mom's
+// medicine in meds/YYYY-MM-DD.json, which older copies of the app never read or write).
 // Each phone reads a day's file, merges it with its own copy, and writes the result back.
 // GitHub refuses a write made against an out-of-date file, so two phones can never silently
 // overwrite each other: the loser re-reads, merges and tries again.
@@ -17,10 +18,14 @@ export class SyncError extends Error {
 }
 
 export class GitHubStore {
-  constructor(token, repo, fetchImpl = (...a) => fetch(...a)) {
+  // dir: the folder of day files ('days' for the baby, 'meds' for Mom's medicine). keep: the cleaner
+  // every entry read from that folder goes through, so each folder only ever holds its own kind.
+  constructor(token, repo, fetchImpl = (...a) => fetch(...a), { dir = 'days', keep = clean } = {}) {
     this.token = token;
     this.repo = repo;
     this.fetch = fetchImpl;
+    this.dir = dir;
+    this.keep = keep;
   }
 
   async call(method, path, body) {
@@ -49,7 +54,7 @@ export class GitHubStore {
 
   // { "2026-11-24": "<file sha>", ... } for every day file in the repo.
   async list() {
-    const res = await this.call('GET', 'contents/days');
+    const res = await this.call('GET', `contents/${this.dir}`);
     if (res.status === 404) {
       // No log folder yet is normal on day one. A key that cannot see the repo at all also answers 404,
       // so ask for the repo itself before calling this "shared".
@@ -66,13 +71,13 @@ export class GitHubStore {
   }
 
   async get(day) {
-    const res = await this.call('GET', `contents/days/${day}.json`);
+    const res = await this.call('GET', `contents/${this.dir}/${day}.json`);
     if (res.status === 404) return { sha: null, events: [] };
     if (!res.ok) throw new SyncError('other', `GitHub answered ${res.status} reading ${day}.`);
     const file = await res.json();
     let events = [];
     try {
-      events = JSON.parse(b64decode(file.content || '')).map(clean).filter(Boolean);
+      events = JSON.parse(b64decode(file.content || '')).map(this.keep).filter(Boolean);
     } catch {
       events = []; // an unreadable file is treated as empty and rewritten from the phones' copies
     }
@@ -80,8 +85,8 @@ export class GitHubStore {
   }
 
   async put(day, events, sha) {
-    const res = await this.call('PUT', `contents/days/${day}.json`, {
-      message: `log ${day}`,
+    const res = await this.call('PUT', `contents/${this.dir}/${day}.json`, {
+      message: `${this.dir === 'days' ? 'log' : this.dir} ${day}`,
       content: b64encode(JSON.stringify(events)),
       ...(sha ? { sha } : {}),
     });

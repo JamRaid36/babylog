@@ -2,8 +2,8 @@
 // every request asks the server whether its copy is still current ('no-cache'), because the host lets a
 // browser reuse a file for 10 minutes and a phone was seen showing the old app after a new one shipped.
 // the saved copy is only used when the network fails. Requests to GitHub's API are never touched.
-const CACHE = 'babylog-v17';
-const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'sync.js', 'manifest.webmanifest', 'bloom-180.png', 'bloom-512.png'];
+const CACHE = 'babylog-v18';
+const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'core.js', 'meds.js', 'sync.js', 'manifest.webmanifest', 'bloom-180.png', 'bloom-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

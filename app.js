@@ -1,4 +1,5 @@
 import * as C from './core.js';
+import * as M from './meds.js';
 import { GitHubStore, SyncError, syncOnce } from './sync.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -24,10 +25,17 @@ const state = {
   dirty: store.get('bl.dirty', {}),   // day -> stamp: days with changes not yet sent
   shas: store.get('bl.shas', {}),     // day -> version of the shared file last seen
 };
+// Mom's medicine: same shape, its own folder in the shared log (meds/), its own place on this phone.
+const meds = {
+  events: store.get('bl.meds', {}),
+  dirty: store.get('bl.medsDirty', {}),
+  shas: store.get('bl.medsShas', {}),
+};
 let syncInfo = { state: 'local', text: 'This phone only. Tap to connect' };
 
 function persist() {
-  const ok = store.set('bl.events', state.events) && store.set('bl.dirty', state.dirty) && store.set('bl.shas', state.shas);
+  const ok = store.set('bl.events', state.events) && store.set('bl.dirty', state.dirty) && store.set('bl.shas', state.shas)
+    && store.set('bl.meds', meds.events) && store.set('bl.medsDirty', meds.dirty) && store.set('bl.medsShas', meds.shas);
   if (!ok) toast('This phone is out of storage space. The last entry may not be saved.');
 }
 
@@ -48,6 +56,14 @@ function seedDemo() {
     const id = C.newId(t);
     state.events[id] = { id, k, t, u: t, by, ...extra };
   }
+  const ibu = M.newMed({ name: 'Ibuprofen', dose: '600 mg', every: 6 }, 'Mom', now - 2000 * m);
+  const ty = M.newMed({ name: 'Tylenol', dose: '1000 mg', every: 6 }, 'Mom', now - 1999 * m);
+  const iron = M.newMed({ name: 'Iron', every: 24 }, 'Mom', now - 1998 * m);
+  for (const med of [ibu, ty, iron]) meds.events[med.id] = med;
+  for (const [med, back, by] of [[ibu, 100, 'Dad'], [ibu, 460, 'Mom'], [ty, 400, 'Mom'], [ty, 800, 'Dad']]) {
+    const dose = M.newDose(med, now - back * m, by, now - back * m);
+    meds.events[dose.id] = dose;
+  }
 }
 
 // ── Changing entries ────────────────────────────────────────────────────────────────────────────
@@ -58,6 +74,18 @@ function put(e) {
   state.dirty[C.bucketOf(saved.id)] = saved.u;
   persist();
   render();
+  queueSync(1500);
+  return saved;
+}
+
+// The same for Mom's medicine.
+function putMed(e) {
+  const saved = M.cleanMed({ ...e, u: Date.now() });
+  if (!saved) return null;
+  meds.events[saved.id] = saved;
+  meds.dirty[C.bucketOf(saved.id)] = saved.u;
+  persist();
+  renderMeds();
   queueSync(1500);
   return saved;
 }
@@ -311,6 +339,7 @@ function render() {
   renderHeader();
   renderInvite();
   renderSince();
+  renderMeds();
   renderLog();
   renderWaiting();
 }
@@ -519,6 +548,251 @@ $('#log').addEventListener('click', (ev) => {
   if (row) openEdit(row.dataset.id);
 });
 
+// ── Mom's meds ──────────────────────────────────────────────────────────────────────────────────
+const doseSheet = $('#doseSheet');
+const medSheet = $('#medSheet');
+const MARK = {
+  ok: '<svg class="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.500l4.500 4.500L19 7.500"/></svg>',
+  wait: '<svg class="line" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/></svg>',
+};
+const medStatusOf = (id, now = Date.now()) => M.medStatus(Object.values(meds.events), now).find((x) => x.med.id === id);
+
+function renderMeds() {
+  const now = Date.now();
+  const box = $('#medList');
+  const list = M.medStatus(Object.values(meds.events), now);
+  box.replaceChildren();
+  if (!list.length) {
+    const empty = el('div', 'meds-empty');
+    empty.append(el('strong', '', 'Keep track of Mom\'s medicine here'),
+      'Add each one once. Then tap Took it whenever she takes it, and both phones show when it is OK again.');
+    const add = el('button', 'btn btn-primary', 'Add her first medicine');
+    add.type = 'button';
+    add.addEventListener('click', () => openMed(null));
+    empty.append(add);
+    box.append(empty);
+    return;
+  }
+  const ul = el('ul', 'med-list');
+  for (const s of list) {
+    const words = M.statusText(s, now);
+    const li = el('li', 'med');
+    li.dataset.id = s.med.id;
+    li.dataset.ok = String(!!s.last && s.ok);
+    const open = el('button', 'med-open');
+    open.type = 'button';
+    open.dataset.med = 'open';
+    const name = el('span', 'med-name', s.med.name);
+    if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
+    const head = el('span', 'med-head');
+    if (s.last) head.innerHTML = s.ok ? MARK.ok : MARK.wait; // fixed drawings only, never anything typed or synced
+    head.append(words.head);
+    open.append(name, head, el('span', 'med-sub', words.sub));
+    open.setAttribute('aria-label', `${M.medLabel(s.med)}. ${words.head}. ${words.sub}. Change it or see her doses`);
+    const took = el('button', 'btn btn-primary med-took', 'Took it');
+    took.type = 'button';
+    took.dataset.med = 'took';
+    took.setAttribute('aria-label', `Mom took ${s.med.name}`);
+    li.append(open, took);
+    ul.append(li);
+  }
+  box.append(ul);
+}
+$('#medList').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-med]');
+  const card = ev.target.closest('.med');
+  if (!btn || !card) return;
+  if (btn.dataset.med === 'took') openDose(card.dataset.id);
+  else openMed(card.dataset.id);
+});
+$('#medAdd').addEventListener('click', () => openMed(null));
+
+// "Took it": pick when, then Save. Nothing is logged before Save.
+let doseMed = null;
+let doseBase = 0; // the moment the sheet opened; "15 min ago" counts back from it
+function openDose(id) {
+  const med = meds.events[id];
+  if (!med || med.x) return;
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  hideToast();
+  doseMed = id;
+  doseBase = Date.now();
+  $('#doseTitle').textContent = med.name;
+  $('#doseSub').textContent = [med.dose, M.everyText(med.every)].filter(Boolean).join(' · ');
+  $('#doseForm').elements.back.value = '0';
+  $('#doseWhen').value = C.toLocalInput(doseBase);
+  $('#doseWhen').max = C.toLocalInput(doseBase + 60e3);
+  $('#doseWhenError').hidden = true;
+  paintDose();
+  doseSheet.showModal();
+}
+function doseTime() {
+  const typed = C.fromLocalInput($('#doseWhen').value);
+  if (typed === null) return null;
+  // the exact minute typed, or the moment the sheet opened when nobody changed it
+  return C.toLocalInput(typed) === C.toLocalInput(doseBase) ? doseBase : typed;
+}
+function paintDose() {
+  const t = doseTime();
+  const warn = t === null ? '' : M.earlyWarning(medStatusOf(doseMed), t);
+  const box = $('#doseWarn');
+  box.hidden = !warn;
+  if (warn) box.replaceChildren(el('strong', '', 'Earlier than her schedule'), warn);
+  $('#doseSave').textContent = warn ? 'Save anyway' : 'Save';
+}
+$('#doseForm').addEventListener('change', (ev) => {
+  if (ev.target.name === 'back') $('#doseWhen').value = C.toLocalInput(doseBase - Number(ev.target.value) * 60e3);
+  if (ev.target.name === 'when') for (const r of $('#doseForm').elements.back) r.checked = false;
+  $('#doseWhenError').hidden = true;
+  paintDose();
+});
+$('#doseWhen').addEventListener('input', paintDose);
+$('#doseForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const med = meds.events[doseMed];
+  if (!med || med.x) return doseSheet.close();
+  const t = doseTime();
+  if (t === null || t > Date.now() + 60e3) {
+    $('#doseWhenError').hidden = false;
+    $('#doseWhen').focus();
+    return undefined;
+  }
+  const saved = putMed(M.newDose(med, t, cfg.me));
+  doseSheet.close();
+  if (!saved) return undefined;
+  const card = document.querySelector(`.med[data-id="${med.id}"]`);
+  if (card) { card.classList.remove('is-logged'); void card.offsetWidth; card.classList.add('is-logged'); }
+  const s = medStatusOf(med.id);
+  const next = s && s.nextAt && s.last && s.last.id === saved.id ? `. OK again ${C.clock(s.nextAt)}` : '';
+  toast(`${med.name} saved · ${C.clock(saved.t)}${next}`, 'Undo', () => { if (meds.events[saved.id]) putMed({ ...meds.events[saved.id], x: true }); });
+  return undefined;
+});
+$('#doseCancel').addEventListener('click', () => doseSheet.close());
+
+// Add a medicine, or change one and see her doses of it.
+let medId = null;
+let medPreset = '';
+let removeArmed = null;
+let doseArmed = null;
+function openMed(id) {
+  const med = id ? meds.events[id] : null;
+  if (id && (!med || med.x)) return;
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  medId = id;
+  medPreset = '';
+  const form = $('#medForm');
+  $('#medTitle').textContent = med ? med.name : 'Add a medicine';
+  $('#medSave').textContent = med ? 'Save changes' : 'Add it';
+  $('#medPresets').hidden = !!med;
+  $('#medName').value = med ? med.name : '';
+  $('#medDose').value = med && med.dose ? med.dose : '';
+  for (const r of form.elements.every) r.checked = !!med && Number(r.value) === med.every;
+  $('#medNameError').hidden = true;
+  $('#medEveryError').hidden = true;
+  paintPresets();
+  $('#medHistory').hidden = !med;
+  disarmRemove();
+  if (med) paintDoses();
+  medSheet.showModal();
+  medSheet.scrollTop = 0;
+}
+function paintPresets() {
+  $('#medPresetRow').replaceChildren(...M.PRESETS.map((name) => {
+    const b = el('button', 'btn', name);
+    b.type = 'button';
+    b.dataset.preset = name;
+    b.setAttribute('aria-pressed', String(medPreset === name));
+    return b;
+  }));
+}
+$('#medPresetRow').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-preset]');
+  if (!b) return;
+  medPreset = b.dataset.preset;
+  $('#medName').value = medPreset;
+  $('#medNameError').hidden = true;
+  paintPresets();
+  $('#medDose').focus();
+});
+$('#medName').addEventListener('input', () => { if (medPreset && $('#medName').value !== medPreset) { medPreset = ''; paintPresets(); } });
+
+function paintDoses() {
+  const list = $('#medDoses');
+  const doses = M.dosesOf(Object.values(meds.events), medId).slice(0, 30);
+  list.replaceChildren();
+  if (!doses.length) { list.append(el('li', 'dose-none', 'None yet. Tap Took it on the front page when she takes one.')); return; }
+  for (const d of doses) {
+    const li = el('li', 'dose-row');
+    const words = el('span');
+    words.append(`${C.dayLabel(d.t)}, ${C.clock(d.t)}`, el('small', '', [d.dose, d.by ? `logged by ${d.by}` : ''].filter(Boolean).join(' · ')));
+    const del = el('button', 'btn', 'Delete');
+    del.type = 'button';
+    del.dataset.dose = d.id;
+    del.setAttribute('aria-label', `Delete the dose at ${C.clock(d.t)}`);
+    li.append(words, del);
+    list.append(li);
+  }
+}
+$('#medDoses').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-dose]');
+  if (!btn) return;
+  const d = meds.events[btn.dataset.dose];
+  if (!d) return;
+  if (doseArmed !== d.id) { // first tap arms it; a second tap within 4 seconds deletes
+    paintDoses();
+    const again = document.querySelector(`#medDoses [data-dose="${d.id}"]`);
+    again.classList.add('is-armed');
+    again.textContent = 'Tap again';
+    doseArmed = d.id;
+    setTimeout(() => { if (doseArmed === d.id) { doseArmed = null; if (medSheet.open) paintDoses(); } }, 4000);
+    return;
+  }
+  doseArmed = null;
+  putMed({ ...d, x: true });
+  paintDoses();
+  toast(`${d.name} at ${C.clock(d.t)} deleted.`, 'Undo', () => { putMed({ ...d, x: false }); if (medSheet.open) paintDoses(); });
+});
+
+$('#medForm').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const form = $('#medForm');
+  const name = $('#medName').value.trim();
+  const picked = form.elements.every.value;
+  $('#medNameError').hidden = !!name;
+  $('#medEveryError').hidden = picked !== '';
+  if (!name) { $('#medName').focus(); return; }
+  if (picked === '') { form.elements.every[0].focus(); return; }
+  const fields = { name, dose: $('#medDose').value, every: Number(picked) };
+  const cur = medId ? meds.events[medId] : null;
+  const saved = cur ? putMed({ ...cur, ...fields }) : putMed(M.newMed(fields, cfg.me));
+  medSheet.close();
+  if (saved) toast(cur ? `${saved.name} saved.` : `${saved.name} added. Tap Took it when she takes one.`);
+});
+$('#medCancel').addEventListener('click', () => medSheet.close());
+
+function disarmRemove() {
+  clearTimeout(removeArmed);
+  removeArmed = null;
+  const btn = $('#medRemove');
+  btn.classList.remove('is-armed');
+  btn.textContent = 'Remove this medicine';
+}
+$('#medRemove').addEventListener('click', () => {
+  const btn = $('#medRemove');
+  if (!removeArmed) {
+    btn.classList.add('is-armed');
+    btn.textContent = 'Tap again to remove it';
+    removeArmed = setTimeout(disarmRemove, 4000);
+    return;
+  }
+  const med = meds.events[medId];
+  disarmRemove();
+  medSheet.close();
+  if (!med) return;
+  putMed({ ...med, x: true });
+  toast(`${med.name} removed.`, 'Undo', () => putMed({ ...med, x: false }));
+});
+
 // ── Settings sheet ──────────────────────────────────────────────────────────────────────────────
 const settingsSheet = $('#settingsSheet');
 
@@ -586,6 +860,8 @@ $('#settingsForm').addEventListener('submit', (ev) => {
     // a different log: forget the file versions and offer everything on this phone to it
     state.shas = {};
     for (const e of Object.values(state.events)) state.dirty[C.bucketOf(e.id)] = Date.now();
+    meds.shas = {};
+    for (const e of Object.values(meds.events)) meds.dirty[C.bucketOf(e.id)] = Date.now();
     persist();
   }
   settingsSheet.close();
@@ -770,6 +1046,8 @@ function applySetup(setup) {
   store.set('bl.cfg', cfg);
   state.shas = {};
   for (const e of Object.values(state.events)) state.dirty[C.bucketOf(e.id)] = Date.now();
+  meds.shas = {};
+  for (const e of Object.values(meds.events)) meds.dirty[C.bucketOf(e.id)] = Date.now();
   persist();
   keepSetupInAddress();
   setSync('syncing');
@@ -839,10 +1117,11 @@ guide.addEventListener('cancel', (ev) => ev.preventDefault());
 $('#nudgeHide').addEventListener('click', () => { store.set('bl.hideNudge', true); $('#nudge').hidden = true; });
 
 // A sheet closes on a tap outside it only when nothing typed would be lost; Esc and Cancel always work.
-for (const sheet of [editSheet, settingsSheet, helpSheet, welcomeSheet]) {
+for (const sheet of [editSheet, settingsSheet, helpSheet, welcomeSheet, doseSheet, medSheet]) {
   sheet.addEventListener('click', (ev) => {
     if (ev.target !== sheet) return;
-    if (sheet === helpSheet || sheet === welcomeSheet) sheet.close();
+    if (sheet === helpSheet || sheet === welcomeSheet || sheet === doseSheet) sheet.close();
+    else if (sheet === medSheet && !$('#medName').value && !$('#medDose').value) sheet.close();
     else if (sheet === settingsSheet && !$('#setToken').value && !$('#setMe').value) sheet.close();
   });
 }
@@ -870,9 +1149,10 @@ async function runSync(announce) {
   setSync('syncing');
   try {
     const changed = await syncOnce(new GitHubStore(cfg.token, cfg.repo), state);
+    const medsChanged = await syncOnce(new GitHubStore(cfg.token, cfg.repo, undefined, { dir: 'meds', keep: M.cleanMed }), meds);
     persist();
     setSync('synced');
-    if (changed) render();
+    if (changed || medsChanged) render();
     if (announce) toast('Up to date.');
   } catch (err) {
     persist();
@@ -912,7 +1192,7 @@ queueSync(0);
 if (FORCE && FORCE.startsWith('guide-')) showGuide(FORCE.slice(6));
 else if (!DEMO) nextGuide();
 
-setInterval(renderSince, 20e3);
+setInterval(() => { renderSince(); renderMeds(); }, 20e3);
 setInterval(() => { if (document.visibilityState === 'visible') queueSync(0); }, 60e3);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { render(); queueSync(0); }
@@ -929,6 +1209,12 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'settings') openSettings();
   if (show === 'help') openHelp();
   if (show === 'welcome') welcomeSheet.showModal();
+  const medIds = M.medStatus(Object.values(meds.events)).map((x) => x.med.id);
+  if (show === 'med-add') openMed(null);
+  if (show === 'med') openMed(medIds[0]);
+  if (show === 'dose') openDose(medIds[1]);
+  if (show === 'dose-early') openDose(medIds[0]);
+  if (show === 'meds-empty') { for (const k of Object.keys(meds.events)) delete meds.events[k]; renderMeds(); }
 }
 
 if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {

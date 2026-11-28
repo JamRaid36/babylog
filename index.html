@@ -53,6 +53,15 @@
     <path d="M21.500 36q2.500 2.300 5 0" fill="none" stroke="#6B3A55" stroke-width="1.500" stroke-linecap="round"/>
     <circle cx="18" cy="35.500" r="1.600" fill="#F7A8C4" opacity=".8"/><circle cx="30" cy="35.500" r="1.600" fill="#F7A8C4" opacity=".8"/>
   </symbol>
+  <symbol id="i-pill" viewBox="0 0 48 48">
+    <g transform="rotate(-35 24 24)">
+      <rect x="8" y="15" width="32" height="18" rx="9" fill="#FFFFFF" stroke="#C77DBA" stroke-width="2"/>
+      <path d="M17 15h7v18h-7a9 9 0 0 1 0-18z" fill="#E7B3DC"/>
+    </g>
+    <circle cx="25" cy="26" r="1.500" fill="#6B3A55"/><circle cx="31" cy="22" r="1.500" fill="#6B3A55"/>
+    <path d="M26.500 30q3.200.6 4.600-2.400" fill="none" stroke="#6B3A55" stroke-width="1.500" stroke-linecap="round"/>
+    <circle cx="35.500" cy="10" r="2.200" fill="#F7A8C4"/><circle cx="40" cy="15" r="1.500" fill="#FFD86B"/>
+  </symbol>
   <symbol id="i-flower" viewBox="0 0 48 48">
     <g fill="currentColor">
       <circle cx="24" cy="12" r="8"/><circle cx="35.400" cy="20.300" r="8"/><circle cx="31" cy="33.700" r="8"/>
@@ -169,6 +178,19 @@
 
   <p class="tally"><span class="eyebrow">Last 24 hours</span> <span id="tally">0 feeds &middot; 0 pees &middot; 0 poops</span></p>
   <p class="tally tally-drank" id="intakeLine" hidden><span class="eyebrow">She drank, last 24 hours</span> <span id="intake"></span></p>
+
+  <!-- Mom's medicine. Filled in by app.js from meds.js. Stored apart from the baby's entries (meds/ in the private log). -->
+  <section class="meds" id="meds" aria-labelledby="medsHead">
+    <div class="meds-head">
+      <svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>
+      <div class="meds-title">
+        <p class="eyebrow">Just for Mom</p>
+        <h2 id="medsHead">Mom's meds</h2>
+      </div>
+      <button type="button" class="btn btn-soft" id="medAdd" aria-label="Add a medicine">+ Add</button>
+    </div>
+    <div id="medList"></div>
+  </section>
 
   <p class="notice" id="notice" hidden></p>
 
@@ -334,6 +356,73 @@
       <button type="button" class="btn" id="editCancel">Cancel</button>
     </div>
     <button type="button" class="btn btn-danger" id="editDelete">Delete this entry</button>
+  </form>
+</dialog>
+
+<!-- "Took it": nothing is logged until Save. Says so when her schedule says it is early. -->
+<dialog class="sheet" id="doseSheet" aria-labelledby="doseTitle">
+  <form method="dialog" id="doseForm" novalidate>
+    <p class="eyebrow">Mom took</p>
+    <h2 class="sheet-title" id="doseTitle" tabindex="-1" autofocus>Ibuprofen</h2>
+    <p class="dose-sub" id="doseSub"></p>
+    <p class="dose-warn" id="doseWarn" role="alert" hidden></p>
+    <fieldset class="seg seg-2">
+      <legend class="eyebrow">When did she take it</legend>
+      <label><input type="radio" name="back" value="0" checked><span>Just now</span></label>
+      <label><input type="radio" name="back" value="15"><span>15 min ago</span></label>
+      <label><input type="radio" name="back" value="30"><span>30 min ago</span></label>
+      <label><input type="radio" name="back" value="60"><span>1 hour ago</span></label>
+    </fieldset>
+    <label class="field">
+      <span class="eyebrow">Or the exact time</span>
+      <input type="datetime-local" id="doseWhen" name="when">
+      <span class="field-error" id="doseWhenError" hidden>Pick a date and time, no later than now.</span>
+    </label>
+    <div class="sheet-actions">
+      <button type="submit" class="btn btn-primary" id="doseSave">Save</button>
+      <button type="button" class="btn" id="doseCancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Add a medicine, or change one: its name, dose and how often, and the doses she has taken. -->
+<dialog class="sheet" id="medSheet" aria-labelledby="medTitle">
+  <form method="dialog" id="medForm" novalidate>
+    <h2 class="sheet-title" id="medTitle" tabindex="-1" autofocus>Add a medicine</h2>
+    <div class="med-presets" id="medPresets">
+      <p class="eyebrow">Tap one, or type your own below</p>
+      <div class="med-preset-row" id="medPresetRow"></div>
+    </div>
+    <label class="field">
+      <span class="eyebrow">Name</span>
+      <input type="text" id="medName" name="medname" maxlength="60" autocomplete="off" autocapitalize="words" placeholder="Ibuprofen, iron, stool softener…">
+      <span class="field-error" id="medNameError" hidden>Give it a name, so you can tell it apart.</span>
+    </label>
+    <label class="field">
+      <span class="eyebrow">Dose (optional)</span>
+      <input type="text" id="medDose" name="meddose" maxlength="60" autocomplete="off" placeholder="600 mg, 1 tablet…">
+    </label>
+    <fieldset class="seg" id="medEvery">
+      <legend class="eyebrow">How often</legend>
+      <label><input type="radio" name="every" value="4"><span>Every 4 hrs</span></label>
+      <label><input type="radio" name="every" value="6"><span>Every 6 hrs</span></label>
+      <label><input type="radio" name="every" value="8"><span>Every 8 hrs</span></label>
+      <label><input type="radio" name="every" value="12"><span>Every 12 hrs</span></label>
+      <label><input type="radio" name="every" value="24"><span>Once a day</span></label>
+      <label><input type="radio" name="every" value="0"><span>As needed</span></label>
+      <p class="field-help seg-help">Go by her prescription or the label. Jubilee only keeps time; it never decides a dose.</p>
+      <span class="field-error seg-help" id="medEveryError" hidden>Pick how often she takes it.</span>
+    </fieldset>
+    <div class="sheet-actions">
+      <button type="submit" class="btn btn-primary" id="medSave">Add it</button>
+      <button type="button" class="btn" id="medCancel">Cancel</button>
+    </div>
+    <div id="medHistory" hidden>
+      <h3 class="sheet-sub">Doses she has taken</h3>
+      <ul class="dose-list" id="medDoses"></ul>
+      <button type="button" class="btn btn-danger" id="medRemove">Remove this medicine</button>
+      <p class="field-help">Removing it takes it off the front page. Her past doses stay in the log.</p>
+    </div>
   </form>
 </dialog>
 
@@ -511,6 +600,17 @@
   <section class="help-card">
     <h3><svg class="art" aria-hidden="true"><use href="#i-pee"/></svg>What the top of the screen shows</h3>
     <p><strong>Last feed, Last pee, Last poop</strong> is how long ago each one was. <strong>Last 24 hours</strong> is how many of each since this time yesterday.</p>
+  </section>
+
+  <section class="help-card">
+    <h3><svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>Mom's meds</h3>
+    <ol>
+      <li>Tap <strong>+ Add</strong> beside <strong>Mom's meds</strong>. Pick Ibuprofen or Tylenol, or type any medicine. Add the dose if you like, and how often she takes it.</li>
+      <li>Each time she takes one, tap <strong>Took it</strong>, then <strong>Save</strong>. Took it a while ago? Tap <strong>30 min ago</strong> or pick the time.</li>
+      <li>The card then says when it is <strong>OK again</strong>, on both phones, so either of you can check at 3 AM.</li>
+    </ol>
+    <p>If it is earlier than her schedule says, the Took it screen tells you when the last one was. Jubilee only keeps time. Her prescription or the label decides the dose.</p>
+    <p>Logged one by mistake? Tap <strong>Undo</strong>, or tap the medicine's name and delete that dose. The phone does not buzz when a dose is due: set an alarm in the Clock app for that.</p>
   </section>
 
   <section class="help-card">
