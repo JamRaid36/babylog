@@ -363,6 +363,16 @@
   </form>
 </dialog>
 
+<!-- One earlier day, opened from its folded line in History. -->
+<dialog class="sheet" id="daySheet" aria-labelledby="dayTitle">
+  <h2 class="sheet-title" id="dayTitle" tabindex="-1" autofocus>Yesterday</h2>
+  <p class="day-sheet-count" id="dayCount"></p>
+  <p class="day-sheet-drank" id="dayDrank" hidden></p>
+  <div id="dayRows"></div>
+  <p class="field-help">Tap an entry to fix or delete it.</p>
+  <button type="button" class="btn btn-primary" id="dayClose">Done</button>
+</dialog>
+
 <!-- "Took it": nothing is logged until Save. Says so when her schedule says it is early. -->
 <dialog class="sheet" id="doseSheet" aria-labelledby="doseTitle">
   <form method="dialog" id="doseForm" novalidate>
@@ -605,7 +615,7 @@
   <section class="help-card">
     <h3><svg class="art" aria-hidden="true"><use href="#i-baby"/></svg>Fix or delete an entry</h3>
     <ol>
-      <li>Tap the entry in <strong>History</strong>.</li>
+      <li>Tap the entry in <strong>History</strong>. Earlier days are folded into one line each: tap the day first, then the entry.</li>
       <li>Change what you need and tap <strong>Save entry</strong>.</li>
       <li>To remove it, tap <strong>Delete this entry</strong>, then tap it again.</li>
     </ol>

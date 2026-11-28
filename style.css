@@ -566,3 +566,27 @@ main { max-width: 560px; margin: 0 auto; padding: var(--s4) var(--s4) 0; }
 .pick-status { display: block; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pick[data-ok="true"] .pick-status { color: var(--ok); }
 .pick .line { color: var(--rose); }
+
+/* History: earlier days folded into one line each */
+.day-none { padding: var(--s3) var(--s4); background: var(--paper); border-radius: var(--r2); font-size: 14px; color: var(--muted); }
+.days { margin-top: var(--s4); }
+.days-title { padding: 0 var(--s1) var(--s2); }
+.folds { list-style: none; background: var(--paper); border-radius: var(--r2); box-shadow: var(--shadow); overflow: hidden; }
+.fold {
+  width: 100%; min-height: 60px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3) var(--s2) var(--s4); text-align: left;
+  background: transparent; border: 0; border-bottom: 2px solid var(--rule);
+  transition: background var(--fast) ease-out;
+}
+.folds li:last-child .fold { border-bottom: 0; }
+.fold:active { background: var(--rule); }
+.fold .line { color: var(--rose); }
+.fold-name { display: block; font-size: 16px; font-weight: 800; }
+.fold-count, .fold-drank { display: block; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.fold-drank { color: var(--ink); font-weight: 700; }
+#foldMore { margin-top: var(--s3); }
+.day-sheet-count { margin-top: calc(-1 * var(--s2)); font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day-sheet-drank { margin-top: var(--s1); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#dayRows { margin-top: var(--s3); }
+#daySheet .field-help { margin-top: var(--s2); }
+#daySheet #dayClose { margin-top: var(--s4); }

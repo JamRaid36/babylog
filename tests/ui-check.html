@@ -22,9 +22,11 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     await load('../index.html?demo');
     let d = frame.contentDocument;
     const q = (s) => d.querySelector(s);
-    const rows = () => d.querySelectorAll('.row').length;
+    const rows = () => d.querySelectorAll('#log .row').length;
     const before = rows();
-    check('sample entries are listed', before === 13, `rows=${before}`);
+    let folded = 0;
+    for (const f of d.querySelectorAll('.fold')) { f.click(); folded += d.querySelectorAll('#dayRows .row').length; q('#dayClose').click(); }
+    check('today is listed in full, earlier days fold into one line each, and nothing is missing', d.querySelectorAll('.fold').length >= 1 && before + folded === 13 && !q('#daySheet').open, `today=${before} folded=${folded}`);
 
     q('.act[data-log="pee"]').click();
     check('a tap alone logs nothing', rows() === before && q('#sincePee').textContent !== 'just now');
@@ -470,6 +472,32 @@ const load = (url) => new Promise((r) => { frame.onload = () => setTimeout(r, 30
     check('meds: picking one opens its Took it sheet', !d.querySelector('#medPickSheet').open && d.querySelector('#doseSheet').open && d.querySelector('#doseTitle').textContent === 'Tylenol');
     d.querySelector('#doseForm').requestSubmit();
     check('meds: saving from there flashes the Meds button', d.querySelector('.act[data-log="meds"]').classList.contains('is-logged') && d.querySelector('.act[data-log="meds"] .act-label').textContent === 'Saved');
+
+    // ── History folds: today in full, the last two weeks one line each, older behind a button ──
+    localStorage.clear();
+    localStorage.setItem('bl.cfg', JSON.stringify({ role: 'dad', me: 'Dad', feed: 'bottle' }));
+    localStorage.setItem('bl.seenWelcome', 'true');
+    const mk = (daysBack, k) => { const t = Date.now() - daysBack * 864e5 - k.length * 60e3; const id = `${new Date(t).toISOString().slice(0, 10)}-${t.toString(36)}${k}`; return [id, { id, k, t, u: t }]; };
+    localStorage.setItem('bl.events', JSON.stringify(Object.fromEntries([mk(0, 'pee'), mk(3, 'feed'), mk(3, 'poop'), mk(20, 'pee')])));
+    await load('../index.html?folds');
+    d = frame.contentDocument;
+    const f = (s) => d.querySelector(s);
+    check('folds: only today is drawn as rows', d.querySelectorAll('#log .row').length === 1);
+    check('folds: the last two weeks are one line each, the older day hidden behind a button', d.querySelectorAll('.fold').length === 1 && f('#foldMore')?.textContent === 'Show older days (1)' && f('.fold-count').textContent.startsWith('1 feed'));
+    f('#foldMore').click();
+    check('folds: "Show older days" shows it, and can be undone', d.querySelectorAll('.fold').length === 2 && f('#foldMore').textContent === 'Show only the last two weeks');
+    f('#foldMore').click();
+    f('.fold').click();
+    check('folds: tapping a day opens it in a sheet with its entries', f('#daySheet').open && d.querySelectorAll('#dayRows .row').length === 2 && f('#dayCount').textContent.startsWith('1 feed'));
+    f('#dayRows .row').click();
+    check('folds: an entry there opens the usual edit sheet', f('#editSheet').open);
+    f('#editDelete').click();
+    f('#editDelete').click();
+    check('folds: deleting it updates the open day', f('#daySheet').open && d.querySelectorAll('#dayRows .row').length === 1 && f('#dayCount').textContent.startsWith('0 feeds'));
+    f('#toastAction').click();
+    check('folds: Undo puts it back in the open day', d.querySelectorAll('#dayRows .row').length === 2);
+    f('#dayClose').click();
+    check('folds: Done closes the day; nothing was lost', !f('#daySheet').open && Object.keys(JSON.parse(localStorage.getItem('bl.events'))).length === 4);
   } catch (err) {
     check('the check itself ran', false, String(err && err.stack || err));
   } finally {

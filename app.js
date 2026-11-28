@@ -258,48 +258,134 @@ function art(name) {
   return svg;
 }
 
+// History: today in full; each earlier day folds into one line that opens it in a sheet. The page stays
+// the same length however old she gets: today's rows plus at most 14 one-liners, older days one tap away.
+const FOLD_DAYS = 14;
+let showOlder = false;
+let dayOpen = null; // the day key open in the day sheet
+
+function rowsFor(items) {
+  const list = el('ul', 'rows');
+  for (const e of items) {
+    const li = el('li');
+    const row = el('button', 'row');
+    row.type = 'button';
+    row.dataset.id = e.id;
+    const what = el('span', 'row-what');
+    what.append(el('span', 'row-kind', C.KIND_LABEL[e.k]));
+    const d = C.detail(e);
+    if (d) what.append(el('span', 'row-detail', d));
+    const ico = el('span', 'row-ico');
+    ico.dataset.kind = e.k;
+    ico.append(art(e.k));
+    const meta = el('span', 'row-meta');
+    meta.append(el('span', 'row-time', C.clock(e.t)), el('span', 'row-by', e.by || ''));
+    row.append(ico, what, meta);
+    row.setAttribute('aria-label', `${C.KIND_LABEL[e.k]} at ${C.clock(e.t)}${d ? `, ${d}` : ''}. Edit`);
+    li.append(row);
+    list.append(li);
+  }
+  return list;
+}
+
 function renderLog() {
   const box = $('#log');
   box.replaceChildren();
-  const groups = C.groupByDay(Object.values(state.events));
+  const now = Date.now();
+  const groups = C.groupByDay(Object.values(state.events), now);
   if (!groups.length) {
     const empty = el('div', 'empty');
     empty.append(art('baby'), el('p', 'empty-title', 'Nothing logged yet'),
       el('p', 'empty-text', 'Tap Feed, Pee or Poop below the moment it happens, then tap Save. It keeps the time of your first tap.'));
     box.append(empty);
+    renderDaySheet();
     return;
   }
-  for (const g of groups) {
-    const day = el('section', 'day');
-    const head = el('div', 'day-head');
-    head.append(el('h3', 'day-name', g.label), el('p', 'day-count', C.tally(g.count)));
-    const drank = C.intakeText(C.intake(g.items), unitNow());
-    const list = el('ul', 'rows');
-    for (const e of g.items) {
+  const todayKey = C.dayKey(now);
+  const today = groups[0].key === todayKey ? groups[0] : null;
+  const day = el('section', 'day');
+  const head = el('div', 'day-head');
+  head.append(el('h3', 'day-name', 'Today'), el('p', 'day-count', today ? C.tally(today.count) : ''));
+  day.append(head);
+  if (today) {
+    const drank = C.intakeText(C.intake(today.items), unitNow());
+    if (drank) day.append(el('p', 'day-drank', drank));
+    day.append(rowsFor(today.items));
+  } else {
+    day.append(el('p', 'day-none', 'Nothing yet today. Earlier days are below.'));
+  }
+  box.append(day);
+
+  const past = groups.filter((g) => g.key !== todayKey);
+  if (past.length) {
+    const cutoff = C.dayKey(now - FOLD_DAYS * 864e5);
+    const shown = showOlder ? past : past.filter((g) => g.key > cutoff);
+    const older = past.length - shown.length;
+    const sec = el('section', 'days');
+    sec.append(el('h3', 'day-name days-title', 'Earlier days'));
+    const list = el('ul', 'folds');
+    for (const g of shown) {
       const li = el('li');
-      const row = el('button', 'row');
-      row.type = 'button';
-      row.dataset.id = e.id;
-      const what = el('span', 'row-what');
-      what.append(el('span', 'row-kind', C.KIND_LABEL[e.k]));
-      const d = C.detail(e);
-      if (d) what.append(el('span', 'row-detail', d));
-      const ico = el('span', 'row-ico');
-      ico.dataset.kind = e.k;
-      ico.append(art(e.k));
-      const meta = el('span', 'row-meta');
-      meta.append(el('span', 'row-time', C.clock(e.t)), el('span', 'row-by', e.by || ''));
-      row.append(ico, what, meta);
-      row.setAttribute('aria-label', `${C.KIND_LABEL[e.k]} at ${C.clock(e.t)}${d ? `, ${d}` : ''}. Edit`);
-      li.append(row);
+      const b = el('button', 'fold');
+      b.type = 'button';
+      b.dataset.day = g.key;
+      const words = el('span', 'fold-words');
+      const drank = C.intakeText(C.intake(g.items), unitNow());
+      words.append(el('span', 'fold-name', g.label), el('span', 'fold-count', C.tally(g.count)));
+      if (drank) words.append(el('span', 'fold-drank', drank));
+      const go = document.createElementNS(SVG, 'svg');
+      go.setAttribute('class', 'line');
+      go.setAttribute('viewBox', '0 0 24 24');
+      go.setAttribute('aria-hidden', 'true');
+      go.innerHTML = '<path d="M9 6l6 6-6 6"/>'; // a fixed arrow, never anything typed or synced
+      b.append(words, go);
+      b.setAttribute('aria-label', `${g.label}: ${C.tally(g.count)}${drank ? `, ${drank}` : ''}. Open this day`);
+      li.append(b);
       list.append(li);
     }
-    day.append(head);
-    if (drank) day.append(el('p', 'day-drank', drank));
-    day.append(list);
-    box.append(day);
+    sec.append(list);
+    if (older > 0 || showOlder) {
+      const more = el('button', 'btn', showOlder ? 'Show only the last two weeks' : `Show older days (${older})`);
+      more.type = 'button';
+      more.id = 'foldMore';
+      sec.append(more);
+    }
+    box.append(sec);
   }
+  renderDaySheet();
 }
+
+// One past day, opened from its folded line. Rows open the same edit sheet as today's.
+const daySheet = $('#daySheet');
+function openDay(key) {
+  dayOpen = key;
+  renderDaySheet();
+  if (!daySheet.open) daySheet.showModal();
+  daySheet.scrollTop = 0;
+}
+function renderDaySheet() {
+  if (!dayOpen || !daySheet) return;
+  const g = C.groupByDay(Object.values(state.events)).find((x) => x.key === dayOpen);
+  if (!g) { $('#dayRows').replaceChildren(el('p', 'day-none', 'Nothing left on this day.')); $('#dayCount').textContent = ''; $('#dayDrank').hidden = true; return; }
+  $('#dayTitle').textContent = g.label;
+  $('#dayCount').textContent = C.tally(g.count);
+  const drank = C.intakeText(C.intake(g.items), unitNow());
+  $('#dayDrank').hidden = !drank;
+  $('#dayDrank').textContent = drank;
+  $('#dayRows').replaceChildren(rowsFor(g.items));
+}
+$('#log').addEventListener('click', (ev) => {
+  const fold = ev.target.closest('.fold');
+  if (fold) { openDay(fold.dataset.day); return; }
+  if (ev.target.closest('#foldMore')) { showOlder = !showOlder; renderLog(); }
+});
+$('#dayRows').addEventListener('click', (ev) => {
+  const row = ev.target.closest('.row');
+  if (row) openEdit(row.dataset.id);
+});
+$('#dayClose').addEventListener('click', () => daySheet.close());
+daySheet.addEventListener('close', () => { dayOpen = null; $('#dayRows').replaceChildren(); });
+daySheet.addEventListener('click', (ev) => { if (ev.target === daySheet) daySheet.close(); });
 
 function renderHeader() {
   const name = cfg.baby.trim();
@@ -1256,6 +1342,7 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'dose') openDose(medIds[1]);
   if (show === 'dose-early') openDose(medIds[0]);
   if (show === 'meds-pick') medsButton();
+  if (show === 'day') openDay(C.groupByDay(Object.values(state.events)).find((g) => g.key !== C.dayKey(Date.now())).key);
   if (show === 'meds-empty') { for (const k of Object.keys(meds.events)) delete meds.events[k]; renderMeds(); }
 }
 
