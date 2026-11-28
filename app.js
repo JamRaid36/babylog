@@ -643,55 +643,191 @@ const MARK = {
 };
 const medStatusOf = (id, now = Date.now()) => M.medStatus(Object.values(meds.events), now).find((x) => x.med.id === id);
 
-function renderMeds() {
-  const now = Date.now();
+// The list lives in the Meds sheet. Ready now (never taken, as needed, or its time has come) sits open at the
+// top; what is still inside its interval folds into one line. The Meds button wears a small dot while any is ready.
+const medsSheet = $('#medsSheet');
+const manageSheet = $('#medManageSheet');
+const medsBtn = $('#medsBtn');
+let fromMeds = false;     // true while she is inside the Meds flow; closing a sub-sheet then lands back on the list
+let notYetOpen = false;   // the fold stays as she left it while the list redraws
+let pendingNote = null;   // a line for the top of the list after returning from add / change / remove
+
+const readyWords = (n) => (n === 1 ? 'one' : String(n));
+
+function medCard(s, now) {
+  const words = M.statusText(s, now);
+  const li = el('li', 'med');
+  li.dataset.id = s.med.id;
+  li.dataset.ok = String(!!s.last && s.ok);
+  const body = el('div', 'med-open');
+  const name = el('span', 'med-name', s.med.name);
+  if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
+  const head = el('span', 'med-head');
+  if (s.last) head.innerHTML = s.ok ? MARK.ok : MARK.wait; // fixed drawings only, never anything typed or synced
+  head.append(words.head);
+  body.append(name, head, el('span', 'med-sub', words.sub));
+  const took = el('button', 'btn btn-primary med-took', 'Took it');
+  took.type = 'button';
+  took.dataset.med = 'took';
+  took.setAttribute('aria-label', `Mom took ${s.med.name}`);
+  li.append(body, took);
+  return li;
+}
+const medUl = (items, now) => {
+  const ul = el('ul', 'med-list');
+  ul.append(...items.map((s) => medCard(s, now)));
+  return ul;
+};
+
+function paintMedList(list, now) {
   const box = $('#medList');
-  const list = M.medStatus(Object.values(meds.events), now);
-  box.replaceChildren();
+  const next = document.createElement('div');
   if (!list.length) {
     const empty = el('div', 'meds-empty');
     empty.append(el('strong', '', 'Keep track of Mom\'s medicine here'),
-      'Add each one once. Then tap Took it whenever she takes it, and both phones show when it is OK again.');
+      'Add each one once. Then tap Took it whenever she takes one, and both phones show when it is OK again.');
     const add = el('button', 'btn btn-primary', 'Add her first medicine');
     add.type = 'button';
-    add.addEventListener('click', () => openMed(null));
+    add.id = 'medFirst';
     empty.append(add);
-    box.append(empty);
-    return;
+    next.append(empty);
+  } else {
+    const ready = list.filter((s) => s.ok);
+    const wait = list.filter((s) => !s.ok);
+    if (ready.length && wait.length) next.append(el('h3', 'eyebrow', 'Ready now'));
+    if (ready.length) next.append(medUl(ready, now));
+    else next.append(el('p', 'field-help', 'Nothing is ready right now.'));
+    if (wait.length) {
+      const soonest = Math.min(...wait.map((s) => s.nextAt));
+      const fold = el('details', 'med-fold');
+      fold.id = 'medFold';
+      fold.open = notYetOpen;
+      const sum = el('summary');
+      sum.append(el('span', '', `${wait.length} not yet · next at ${C.clock(soonest)}`));
+      const chev = document.createElementNS(SVG, 'svg');
+      chev.setAttribute('class', 'line');
+      chev.setAttribute('viewBox', '0 0 24 24');
+      chev.setAttribute('aria-hidden', 'true');
+      chev.innerHTML = '<path d="M6 9l6 6 6-6"/>'; // a fixed arrow, never anything typed or synced
+      sum.append(chev);
+      fold.append(sum, medUl(wait, now));
+      fold.addEventListener('toggle', () => { notYetOpen = fold.open; });
+      next.append(fold);
+    }
   }
-  const ul = el('ul', 'med-list');
-  for (const s of list) {
-    const words = M.statusText(s, now);
-    const li = el('li', 'med');
-    li.dataset.id = s.med.id;
-    li.dataset.ok = String(!!s.last && s.ok);
-    const open = el('button', 'med-open');
-    open.type = 'button';
-    open.dataset.med = 'open';
-    const name = el('span', 'med-name', s.med.name);
-    if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
-    const head = el('span', 'med-head');
-    if (s.last) head.innerHTML = s.ok ? MARK.ok : MARK.wait; // fixed drawings only, never anything typed or synced
-    head.append(words.head);
-    open.append(name, head, el('span', 'med-sub', words.sub));
-    open.setAttribute('aria-label', `${M.medLabel(s.med)}. ${words.head}. ${words.sub}. Change it or see her doses`);
-    const took = el('button', 'btn btn-primary med-took', 'Took it');
-    took.type = 'button';
-    took.dataset.med = 'took';
-    took.setAttribute('aria-label', `Mom took ${s.med.name}`);
-    li.append(open, took);
-    ul.append(li);
+  $('#medsEdit').hidden = !list.length;
+  if (next.innerHTML === box.dataset.sig && box.firstChild) return; // nothing changed: leave focus and the fold alone
+  const a = document.activeElement;
+  const was = a && box.contains(a) ? (a.closest('summary') ? 'summary' : a.id || `${a.closest('.med')?.dataset.id}`) : null;
+  box.dataset.sig = next.innerHTML;
+  box.replaceChildren(...next.childNodes);
+  if (was) {
+    const back = was === 'summary' ? box.querySelector('summary') : (document.getElementById(was) || box.querySelector(`.med[data-id="${was}"] [data-med="took"]`));
+    if (back) back.focus({ preventScroll: true });
   }
-  box.append(ul);
 }
-$('#medList').addEventListener('click', (ev) => {
-  const btn = ev.target.closest('[data-med]');
-  const card = ev.target.closest('.med');
-  if (!btn || !card) return;
-  if (btn.dataset.med === 'took') openDose(card.dataset.id);
-  else openMed(card.dataset.id);
+
+// As-needed medicines (every 0) sit under Ready now but never light the dot: they are always ready, so a dot
+// for them would never go away and would stop meaning anything (Jason, Olórin chat Tg 29581).
+function paintMedDot(list) {
+  const ready = list.filter((s) => s.ok && s.med.every > 0).length;
+  $('#medsDot').hidden = !ready;
+  medsBtn.setAttribute('aria-label', ready ? `Meds, ${readyWords(ready)} ready` : 'Meds');
+}
+
+function renderMeds() {
+  const now = Date.now();
+  const list = M.medStatus(Object.values(meds.events), now);
+  paintMedDot(list);
+  if (medsSheet.open) paintMedList(list, now);
+}
+
+let shownNote = null;
+function showMedsNote() {
+  const note = $('#medsNote');
+  shownNote = pendingNote;
+  note.hidden = !pendingNote;
+  if (!pendingNote) return;
+  $('#medsNoteText').textContent = pendingNote.text;
+  $('#medsNoteUndo').hidden = !pendingNote.undo;
+}
+$('#medsNoteUndo').addEventListener('click', () => {
+  const n = shownNote;
+  pendingNote = null;
+  showMedsNote();
+  if (n && n.undo) n.undo();
 });
-$('#medAdd').addEventListener('click', () => openMed(null));
+// A line about what just changed. Inside the Meds flow it sits at the top of the list (a toast would hide behind the sheet).
+function medSay(text, undo) {
+  if (fromMeds) pendingNote = { text, undo };
+  else toast(text, undo ? 'Undo' : undefined, undo);
+}
+
+function openMeds(keep = false) {
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  hideToast();
+  fromMeds = true;
+  if (!keep) { notYetOpen = false; pendingNote = null; }
+  $('#medList').dataset.sig = '';
+  medsSheet.showModal();
+  renderMeds();
+  showMedsNote();
+  pendingNote = null;
+  medsSheet.scrollTop = 0;
+}
+// A sheet in the Meds flow closed. Nothing else open: back to the list, or, from the list itself, back to the Meds button.
+function afterMedsClose(sheet) {
+  if (document.querySelector('dialog[open]')) return;
+  if (fromMeds && sheet !== medsSheet) { openMeds(true); return; }
+  fromMeds = false;
+  medsBtn.focus({ preventScroll: true });
+}
+// Closing from a button moves on at once; the browser's own close event (Esc, a tap outside) does the same, and is a no-op when already done.
+function closeSheet(sheet) { sheet.close(); afterMedsClose(sheet); }
+for (const sheet of [medsSheet, manageSheet, doseSheet, medSheet]) sheet.addEventListener('close', () => afterMedsClose(sheet));
+for (const sheet of [medsSheet, manageSheet]) sheet.addEventListener('click', (ev) => { if (ev.target === sheet) closeSheet(sheet); });
+$('#medsDone').addEventListener('click', () => closeSheet(medsSheet));
+$('#medList').addEventListener('click', (ev) => {
+  if (ev.target.closest('#medFirst')) { openMed(null); return; }
+  const btn = ev.target.closest('[data-med="took"]');
+  const card = ev.target.closest('.med');
+  if (btn && card) openDose(card.dataset.id);
+});
+
+// Edit my medicines: one row each, and the way to add one.
+function openManage() {
+  const list = M.medStatus(Object.values(meds.events));
+  $('#medManageList').replaceChildren(...list.map((s) => {
+    const li = el('li');
+    const b = el('button', 'pick');
+    b.type = 'button';
+    b.dataset.edit = s.med.id;
+    const name = el('span', 'pick-name', s.med.name);
+    if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
+    const text = el('span');
+    text.append(name, el('span', 'pick-status', M.everyText(s.med.every)));
+    const go = document.createElementNS(SVG, 'svg');
+    go.setAttribute('class', 'line');
+    go.setAttribute('viewBox', '0 0 24 24');
+    go.setAttribute('aria-hidden', 'true');
+    go.innerHTML = '<path d="M9 6l6 6-6 6"/>'; // a fixed arrow, never anything typed or synced
+    b.append(text, go);
+    b.setAttribute('aria-label', `${M.medLabel(s.med)}. ${M.everyText(s.med.every)}. Change it or remove it`);
+    li.append(b);
+    return li;
+  }));
+  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
+  hideToast();
+  manageSheet.showModal();
+  manageSheet.scrollTop = 0;
+}
+$('#medsEdit').addEventListener('click', openManage);
+$('#medManageList').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-edit]');
+  if (b) openMed(b.dataset.edit);
+});
+$('#medManageAdd').addEventListener('click', () => openMed(null));
+$('#medManageDone').addEventListener('click', () => closeSheet(manageSheet));
 
 // "Took it": pick when, then Save. Nothing is logged before Save.
 let doseMed = null;
@@ -744,57 +880,19 @@ $('#doseForm').addEventListener('submit', (ev) => {
     return undefined;
   }
   const saved = putMed(M.newDose(med, t, cfg.me));
-  doseSheet.close();
+  fromMeds = false; // saved: the whole Meds flow is done, back on the front screen with the button's flash and Undo
+  closeSheet(doseSheet);
   if (!saved) return undefined;
-  const card = document.querySelector(`.med[data-id="${med.id}"]`);
-  if (card) { card.classList.remove('is-logged'); void card.offsetWidth; card.classList.add('is-logged'); }
   flashButton('meds');
   const s = medStatusOf(med.id);
   const next = s && s.nextAt && s.last && s.last.id === saved.id ? `. OK again ${C.clock(s.nextAt)}` : '';
   toast(`${med.name} saved · ${C.clock(saved.t)}${next}`, 'Undo', () => { if (meds.events[saved.id]) putMed({ ...meds.events[saved.id], x: true }); });
   return undefined;
 });
-$('#doseCancel').addEventListener('click', () => doseSheet.close());
+$('#doseCancel').addEventListener('click', () => closeSheet(doseSheet));
 
-// The big Meds button: no medicine yet, add one; one, straight to Took it; more, ask which.
-const medPickSheet = $('#medPickSheet');
-function medsButton() {
-  const list = M.medStatus(Object.values(meds.events));
-  if (!list.length) { openMed(null); return; }
-  if (list.length === 1) { openDose(list[0].med.id); return; }
-  for (const sheet of document.querySelectorAll('dialog[open]')) sheet.close();
-  hideToast();
-  const now = Date.now();
-  $('#medPickList').replaceChildren(...list.map((s) => {
-    const words = M.statusText(s, now);
-    const li = el('li');
-    const b = el('button', 'pick');
-    b.type = 'button';
-    b.dataset.pick = s.med.id;
-    b.dataset.ok = String(!!s.last && s.ok);
-    const name = el('span', 'pick-name', s.med.name);
-    if (s.med.dose) name.append(' ', el('small', '', s.med.dose));
-    const text = el('span');
-    text.append(name, el('span', 'pick-status', words.head));
-    const go = document.createElementNS(SVG, 'svg');
-    go.setAttribute('class', 'line');
-    go.setAttribute('viewBox', '0 0 24 24');
-    go.setAttribute('aria-hidden', 'true');
-    go.innerHTML = '<path d="M9 6l6 6-6 6"/>'; // a fixed arrow, never anything typed or synced
-    b.append(text, go);
-    b.setAttribute('aria-label', `${M.medLabel(s.med)}. ${words.head}`);
-    li.append(b);
-    return li;
-  }));
-  medPickSheet.showModal();
-}
-$('#medPickList').addEventListener('click', (ev) => {
-  const b = ev.target.closest('[data-pick]');
-  if (b) openDose(b.dataset.pick);
-});
-$('#medPickAdd').addEventListener('click', () => openMed(null));
-$('#medPickCancel').addEventListener('click', () => medPickSheet.close());
-medPickSheet.addEventListener('click', (ev) => { if (ev.target === medPickSheet) medPickSheet.close(); });
+// The big Meds button opens her list.
+function medsButton() { openMeds(false); }
 
 // Add a medicine, or change one and see her doses of it.
 let medId = null;
@@ -892,10 +990,10 @@ $('#medForm').addEventListener('submit', (ev) => {
   const fields = { name, dose: $('#medDose').value, every: Number(picked) };
   const cur = medId ? meds.events[medId] : null;
   const saved = cur ? putMed({ ...cur, ...fields }) : putMed(M.newMed(fields, cfg.me));
-  medSheet.close();
-  if (saved) toast(cur ? `${saved.name} saved.` : `${saved.name} added. Tap Took it when she takes one.`);
+  if (saved) medSay(cur ? `${saved.name} saved.` : `${saved.name} added. Tap Took it when she takes one.`);
+  closeSheet(medSheet);
 });
-$('#medCancel').addEventListener('click', () => medSheet.close());
+$('#medCancel').addEventListener('click', () => closeSheet(medSheet));
 
 function disarmRemove() {
   clearTimeout(removeArmed);
@@ -914,10 +1012,11 @@ $('#medRemove').addEventListener('click', () => {
   }
   const med = meds.events[medId];
   disarmRemove();
-  medSheet.close();
-  if (!med) return;
-  putMed({ ...med, x: true });
-  toast(`${med.name} removed.`, 'Undo', () => putMed({ ...med, x: false }));
+  if (med) {
+    putMed({ ...med, x: true });
+    medSay(`${med.name} removed.`, () => putMed({ ...med, x: false }));
+  }
+  closeSheet(medSheet);
 });
 
 // ── Settings sheet ──────────────────────────────────────────────────────────────────────────────
@@ -1341,9 +1440,21 @@ if (DEMO) { // ?demo=tray | edit | settings opens that state, for screenshots an
   if (show === 'med') openMed(medIds[0]);
   if (show === 'dose') openDose(medIds[1]);
   if (show === 'dose-early') openDose(medIds[0]);
-  if (show === 'meds-pick') medsButton();
+  if (show === 'meds' || show === 'meds-pick') medsButton();
+  if (show === 'meds-fold') { medsButton(); $('#medFold').open = true; }
+  if (show === 'meds-ready' || show === 'meds-none-ready' || show === 'dot-off') { // every medicine ready (an old dose, or none), or every one just taken
+    for (const e of Object.values(meds.events)) if (e.k === 'dose') delete meds.events[e.id];
+    const all = M.medStatus(Object.values(meds.events)).map((x) => x.med);
+    for (const med of show === 'meds-ready' ? all.slice(0, 2) : all) {
+      const d = M.newDose(med, Date.now() - (show === 'meds-ready' ? 420 : 20) * 60e3, 'Mom');
+      meds.events[d.id] = d;
+    }
+    renderMeds();
+    if (show !== 'dot-off') medsButton();
+  }
+  if (show === 'meds-manage') { medsButton(); openManage(); }
   if (show === 'day') openDay(C.groupByDay(Object.values(state.events)).find((g) => g.key !== C.dayKey(Date.now())).key);
-  if (show === 'meds-empty') { for (const k of Object.keys(meds.events)) delete meds.events[k]; renderMeds(); }
+  if (show === 'meds-empty') { for (const k of Object.keys(meds.events)) delete meds.events[k]; renderMeds(); medsButton(); }
 }
 
 if ('serviceWorker' in navigator && !DEMO && location.protocol === 'https:') {

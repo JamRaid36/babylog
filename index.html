@@ -179,19 +179,6 @@
   <p class="tally"><span class="eyebrow">Last 24 hours</span> <span id="tally">0 feeds &middot; 0 pees &middot; 0 poops</span></p>
   <p class="tally tally-drank" id="intakeLine" hidden><span class="eyebrow">She drank, last 24 hours</span> <span id="intake"></span></p>
 
-  <!-- Mom's medicine. Filled in by app.js from meds.js. Stored apart from the baby's entries (meds/ in the private log). -->
-  <section class="meds" id="meds" aria-labelledby="medsHead">
-    <div class="meds-head">
-      <svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>
-      <div class="meds-title">
-        <p class="eyebrow">Just for Mom</p>
-        <h2 id="medsHead">Mom's meds</h2>
-      </div>
-      <button type="button" class="btn btn-soft" id="medAdd" aria-label="Add a medicine">+ Add</button>
-    </div>
-    <div id="medList"></div>
-  </section>
-
   <p class="notice" id="notice" hidden></p>
 
   <!-- Folded shut by default. The steps are filled in by app.js from core.js, the same text the button copies. -->
@@ -297,8 +284,9 @@
     <svg class="art" aria-hidden="true"><use href="#i-pump"/></svg>
     <span class="act-label">Pump</span>
   </button>
-  <button type="button" class="act" data-log="meds" aria-label="Mom took a medicine">
+  <button type="button" class="act" data-log="meds" id="medsBtn" aria-label="Meds">
     <svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>
+    <span class="act-dot" id="medsDot" hidden aria-hidden="true"></span>
     <span class="act-label">Meds</span>
   </button>
 </nav>
@@ -399,14 +387,25 @@
   </form>
 </dialog>
 
-<!-- The Meds button, when she has more than one medicine: which one did she take? -->
-<dialog class="sheet" id="medPickSheet" aria-labelledby="medPickTitle">
-  <h2 class="sheet-title" id="medPickTitle" tabindex="-1" autofocus>Which did Mom take?</h2>
-  <ul class="pick-list" id="medPickList"></ul>
-  <div class="sheet-actions">
-    <button type="button" class="btn" id="medPickAdd">+ Add a medicine</button>
-    <button type="button" class="btn" id="medPickCancel">Cancel</button>
-  </div>
+<!-- The Meds button opens Mom's list: what is ready now on top, what is not yet folded into one line. Filled in by app.js from meds.js. Stored apart from the baby's entries (meds/ in the private log). -->
+<dialog class="sheet" id="medsSheet" aria-labelledby="medsTitle">
+  <p class="eyebrow">Just for Mom</p>
+  <h2 class="sheet-title" id="medsTitle" tabindex="-1" autofocus>Mom's meds</h2>
+  <p class="meds-note" id="medsNote" role="status" hidden>
+    <span id="medsNoteText"></span>
+    <button type="button" class="link-btn" id="medsNoteUndo" hidden>Undo</button>
+  </p>
+  <div id="medList"></div>
+  <button type="button" class="link-btn meds-edit" id="medsEdit">Edit my medicines</button>
+  <button type="button" class="btn btn-primary" id="medsDone">Done</button>
+</dialog>
+
+<!-- Edit my medicines: one row each, to change or remove it, and the way to add one. -->
+<dialog class="sheet" id="medManageSheet" aria-labelledby="medManageTitle">
+  <h2 class="sheet-title" id="medManageTitle" tabindex="-1" autofocus>My medicines</h2>
+  <ul class="pick-list" id="medManageList"></ul>
+  <button type="button" class="btn" id="medManageAdd">Add a medicine</button>
+  <button type="button" class="btn btn-primary" id="medManageDone">Done</button>
 </dialog>
 
 <!-- Add a medicine, or change one: its name, dose and how often, and the doses she has taken. -->
@@ -445,7 +444,7 @@
       <h3 class="sheet-sub">Doses she has taken</h3>
       <ul class="dose-list" id="medDoses"></ul>
       <button type="button" class="btn btn-danger" id="medRemove">Remove this medicine</button>
-      <p class="field-help">Removing it takes it off the front page. Her past doses stay in the log.</p>
+      <p class="field-help">Removing it takes it off Mom's list. Her past doses stay in the log.</p>
     </div>
   </form>
 </dialog>
@@ -629,8 +628,8 @@
   <section class="help-card">
     <h3><svg class="art" aria-hidden="true"><use href="#i-pill"/></svg>Mom's meds</h3>
     <ol>
-      <li>Tap <strong>+ Add</strong> beside <strong>Mom's meds</strong>. Pick Ibuprofen or Tylenol, or type any medicine. Add the dose if you like, and how often she takes it.</li>
-      <li>Each time she takes one, tap the big <strong>Meds</strong> button at the bottom (or <strong>Took it</strong> on the medicine), then <strong>Save</strong>. Took it a while ago? Tap <strong>30 min ago</strong> or pick the time.</li>
+      <li>Tap the big <strong>Meds</strong> button, then <strong>Edit my medicines</strong> and <strong>Add a medicine</strong>. Pick Ibuprofen or Tylenol, or type any medicine. Add the dose if you like, and how often she takes it.</li>
+      <li>Each time she takes one, tap the big <strong>Meds</strong> button at the bottom, then <strong>Took it</strong> on that medicine, then <strong>Save</strong>. A small dot on the button means at least one is ready. Took it a while ago? Tap <strong>30 min ago</strong> or pick the time.</li>
       <li>The card then says when it is <strong>OK again</strong>, on both phones, so either of you can check at 3 AM.</li>
     </ol>
     <p>If it is earlier than her schedule says, the Took it screen tells you when the last one was. Jubilee only keeps time. Her prescription or the label decides the dose.</p>
